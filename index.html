@@ -85,13 +85,13 @@ tr:hover td{background:#fdf5f8;}
 .b-e{background:#f0e8f4;color:#5c1a6e;}
 .b-m{background:#e8eff8;color:#1a3a6e;}
 .b-b{background:#fdf0f5;color:var(--bordo-luz);border:1px dashed var(--rosa);}
-.b-q1{background:#e8f4f0;color:#0f5c3a;}
-.b-q2{background:#f0e8f4;color:var(--bordo);}
+.b-q1{background:#f0e8f4;color:#2E101E;}
+.b-q2{background:#f0e8f4;color:#662046;}
 .b-q3{background:#ffe8f0;color:var(--magenta);}
 .b-q4{background:#ffe0ec;color:#8a003a;}
 .b-tbd{background:var(--bg);color:var(--text3);}
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;}
-.don{background:#1D9E75;}.doff{background:var(--cinza);}.dbasic{background:var(--bordo-luz);}
+.don{background:#1D9E75;}.doff{background:var(--cinza);}.dbasic{background:#181818;}
 /* ── ROW ACTIONS ── */
 .ract{display:flex;gap:5px;}
 .ibtn{width:28px;height:28px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;transition:all .12s;font-family:var(--font);-webkit-tap-highlight-color:transparent;}
@@ -104,11 +104,11 @@ tr:hover td{background:#fdf5f8;}
 @media(min-width:641px) and (max-width:900px){.kanban{grid-template-columns:repeat(2,1fr);}}
 .kcol{background:var(--bg);border-radius:var(--rl);padding:10px;border:1px solid var(--border);min-height:180px;}
 .kch{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:3px solid;}
-.kq1{border-bottom-color:#1D9E75!important;}
-.kq2{border-bottom-color:var(--bordo)!important;}
-.kq3{border-bottom-color:var(--magenta)!important;}
-.kq4{border-bottom-color:var(--rosa)!important;}
-.ktbd{border-bottom-color:var(--cinza)!important;}
+.kq1{border-bottom-color:#2E101E!important;}
+.kq2{border-bottom-color:#662046!important;}
+.kq3{border-bottom-color:#BF144A!important;}
+.kq4{border-bottom-color:#FF7DAF!important;}
+.ktbd{border-bottom-color:#D9D9D9!important;}
 .kcol h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
 .kcount{font-size:11px;color:var(--text3);}
 .kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 10px;margin-bottom:6px;cursor:grab;user-select:none;transition:box-shadow .15s,opacity .15s;-webkit-tap-highlight-color:transparent;}
@@ -212,7 +212,7 @@ tr:hover td{background:#fdf5f8;}
 .bcancel{padding:8px 16px;font-size:13px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--r);background:transparent;cursor:pointer;color:var(--text2);}
 .bsave{padding:8px 16px;font-size:13px;font-weight:500;font-family:var(--font);background:var(--bordo);color:var(--branco);border:none;border-radius:var(--r);cursor:pointer;}
 .bdel{padding:8px 16px;font-size:13px;font-weight:500;font-family:var(--font);background:transparent;color:#b00;border:1px solid #b00;border-radius:var(--r);cursor:pointer;margin-right:auto;}
-.bsave:hover{background:var(--bordo-luz);}
+.bsave:hover{background:#181818;}
 /* ── CONFIRM DIALOG ── */
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center;padding:20px;}
 .confirm-overlay.open{display:flex;}
@@ -240,9 +240,31 @@ tr:hover td{background:#fdf5f8;}
 .mdd-item input[type=checkbox]{accent-color:var(--bordo);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
 .mdd-btn{min-width:80px;text-align:left;}
 .mdd-btn.sel{background:var(--bordo);color:var(--branco);border-color:var(--bordo);}
+
+/* preview popup */
+.preview-popup{position:fixed;z-index:250;background:var(--branco);border:1px solid var(--border2);border-radius:var(--rl);padding:16px 18px;width:340px;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.15);pointer-events:none;border-top:3px solid var(--rosa);}
+.preview-popup h4{font-size:13px;font-weight:500;color:var(--bordo);margin-bottom:8px;line-height:1.3;}
+.preview-row{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;}
+.preview-row:last-child{margin-bottom:0;}
+.preview-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
+.preview-val{font-size:12px;color:var(--text2);line-height:1.4;}
 </style>
 </head>
 <body>
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bordo);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="background:var(--branco);border-radius:var(--rl);padding:36px 40px;width:100%;max-width:400px;border-top:4px solid var(--rosa);text-align:center;">
+    <div style="width:48px;height:48px;background:var(--rosa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--bordo);margin:0 auto 16px;">RH</div>
+    <h2 style="font-size:18px;font-weight:500;color:var(--bordo);margin-bottom:4px;">Portfólio de Projetos RH</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:24px;">Entre com seu e-mail para acessar</p>
+    <div id="login-msg" style="display:none;padding:8px 12px;border-radius:var(--r);font-size:12px;margin-bottom:14px;"></div>
+    <input type="email" id="login-email" placeholder="seu@email.com" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">
+    <input type="password" id="login-pass" placeholder="Senha" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;outline:none;margin-bottom:14px;" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()" style="width:100%;padding:11px;background:var(--bordo);color:var(--branco);border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;margin-bottom:10px;">Entrar</button>
+    <button onclick="doMagicLink()" style="width:100%;padding:11px;background:transparent;color:var(--bordo-luz);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:inherit;cursor:pointer;">Receber link de acesso por e-mail</button>
+    <p id="magic-msg" style="display:none;font-size:12px;color:#1D9E75;margin-top:12px;">✓ Link enviado! Verifique seu e-mail.</p>
+  </div>
+</div>
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
@@ -250,14 +272,14 @@ tr:hover td{background:#fdf5f8;}
   </div>
   <span class="hright" id="last-update"></span>
 </header>
-<nav>
+<nav id="main-nav" style="display:none">
   <button class="ntab active" onclick="showTab('projetos',this)">Projetos</button>
   <button class="ntab" onclick="showTab('quarters',this)">Por Quarter</button>
   <button class="ntab" onclick="showTab('visao',this)">Capacidade & Demanda</button>
   <button class="ntab" onclick="showTab('basico',this)">Pipeline BASIC</button>
   <button class="ntab" onclick="showTab('priorizacao',this)">Priorização</button>
 </nav>
-<main>
+<main id="main-content" style="display:none">
 <div class="metrics" id="metrics"></div>
 
 <!-- PROJETOS -->
@@ -374,11 +396,11 @@ tr:hover td{background:#fdf5f8;}
   <div class="cc full">
     <h3>Volume por área · distribuição por quarter (priorizados + BASIC)</h3>
     <div class="legrow">
-      <span class="leg"><span class="lsw" style="background:#1D9E75"></span>Q1</span>
-      <span class="leg"><span class="lsw" style="background:var(--bordo)"></span>Q2</span>
-      <span class="leg"><span class="lsw" style="background:var(--magenta)"></span>Q3</span>
-      <span class="leg"><span class="lsw" style="background:var(--rosa)"></span>Q4</span>
-      <span class="leg"><span class="lsw" style="background:var(--cinza)"></span>Não definido</span>
+      <span class="leg"><span class="lsw" style="background:#2E101E"></span>Q1</span>
+      <span class="leg"><span class="lsw" style="background:#662046"></span>Q2</span>
+      <span class="leg"><span class="lsw" style="background:#BF144A"></span>Q3</span>
+      <span class="leg"><span class="lsw" style="background:#FF7DAF"></span>Q4</span>
+      <span class="leg"><span class="lsw" style="background:#D9D9D9"></span>Não definido</span>
     </div>
     <div id="ch-area"></div>
   </div>
@@ -487,6 +509,7 @@ tr:hover td{background:#fdf5f8;}
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="preview-popup" id="preview-popup" style="display:none"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────
@@ -505,7 +528,7 @@ const TI_CRITERIA=[
 const NOTAS=[0,1,3,5];
 const AREAS=['Acessos e Sistemas','Admissão e Cadastro','Afastamentos e Licenças','Atendimento','Benefícios','Business Partner','Comunicação Interna','DEI&P','Desligamento','DHO','Férias','Folha de Pagamento','Gestão de Ponto','R&S','Remuneração','SST'];
 const AREAS_OPT=AREAS.map(a=>`<option>${a}</option>`).join('');
-const Q_COLORS={Q1:'#1D9E75',Q2:'#2E101E',Q3:'#BF144A',Q4:'#FF7DAF',TBD:'#9E9E9E'};
+const Q_COLORS={Q1:'#2E101E',Q2:'#662046',Q3:'#BF144A',Q4:'#FF7DAF',TBD:'#D9D9D9'};
 
 function calcBizScore(s){
   if(!s)return 0;
@@ -732,6 +755,7 @@ function renderTable(rows,groupByArea){
       <td>${qBadge(p.q)}</td>
       <td>${isB?'<span class="badge b-b">BASIC</span>':'<span style="font-size:10px;color:var(--text3)">Priorizado</span>'}</td>
       <td><div class="ract">
+        <button class="ibtn" onmouseenter="showPreview(${p.id},${isB},event)" onmouseleave="hidePreview()" onclick="showPreview(${p.id},${isB},event)" title="Visualizar">👁</button>
         <button class="ibtn" onclick="${isB?`openModalBasic(basicItems.find(x=>x.id===${p.id}))`:`openModal(${p.id})`}" title="Editar">✎</button>
         <button class="ibtn d" onclick="confirmDel(${p.id},'${isB?'basic':'proj'}')" title="Excluir">✕</button>
       </div></td>
@@ -773,6 +797,7 @@ function dropCard(e,newQ){
   if(!dragId)return;
   if(dragOrig==='basic'){const b=basicItems.find(x=>x.id===dragId);if(b)b._q=newQ;}
   else{const p=projects.find(x=>x.id===dragId);if(p)p.q=newQ;}
+  updateQuarterDB(dragId,dragOrig,newQ);
   dragId=null;renderKanban();renderCarga();toast('Quarter atualizado.');
 }
 
@@ -813,7 +838,7 @@ function initTouchDrag(){
           const newQ=dz.id.replace('kdz-','');
           if(touchOrig==='basic'){const b=basicItems.find(x=>x.id===touchId);if(b)b._q=newQ;}
           else{const p=projects.find(x=>x.id===touchId);if(p)p.q=newQ;}
-          dropped=true;
+          updateQuarterDB(touchId,touchOrig,newQ);dropped=true;
         }
       });
       ghost.remove();ghost=null;card.style.opacity='';
@@ -845,7 +870,7 @@ function renderCarga(){
   document.getElementById('ch-q').innerHTML=Object.entries(qc).map(([q,v])=>`
     <div class="brow"><div class="blbl">${q==='TBD'?'Não definido':q}</div>
     <div class="btrk"><div class="bfill" style="width:${Math.round(v/maxQ*100)}%;background:${Q_COLORS[q]}"><span>${v}</span></div></div></div>`).join('');
-  const tC={'Projeto Estruturante':'var(--bordo-luz)','Melhoria contínua':'var(--magenta)'};
+  const tC={'Projeto Estruturante':'#181818','Melhoria contínua':'#9E9E9E'};
   const maxT=Math.max(1,...Object.values(tc));
   document.getElementById('ch-t').innerHTML=Object.entries(tc).map(([t,v])=>`
     <div class="brow"><div class="blbl" style="min-width:150px;font-size:11px">${t}</div>
@@ -892,7 +917,7 @@ function renderBasic(){
       <td>${ti!=null?`<span class="sp-ti">${ti}</span>`:'<span style="font-size:10px;color:var(--text3)">Aguarda TI</span>'}</td>
       <td>${tot!=null?`<span class="sp-tot">${tot}</span>`:'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
       <td><span class="qb ${q.c}">${q.l}</span></td>
-      <td><div class="ract">
+      <td><div class="ract"><button class="ibtn" onmouseenter="showPreview(${b.id},true,event)" onmouseleave="hidePreview()" onclick="showPreview(${b.id},true,event)" title="Visualizar">👁</button>
         <button class="ibtn" onclick="openModalBasic(basicItems.find(x=>x.id===${b.id}))" title="Editar">✎</button>
         <button class="ibtn d" onclick="confirmDel(${b.id},'basic')" title="Excluir">✕</button>
       </div></td>
@@ -1411,6 +1436,57 @@ document.addEventListener('click',e=>{
 });
 
 
+
+// ── PREVIEW POPUP ─────────────────────────────────────────
+function showPreview(id, isBasic, event){
+  const p = isBasic
+    ? basicItems.find(x=>x.id===id)
+    : projects.find(x=>x.id===id);
+  if(!p) return;
+  const pop = document.getElementById('preview-popup');
+  const desc = p.desc||p.descricao||'';
+  const benef = p.benef||p.beneficio||'';
+  let content = `<h4 style="font-size:13px;font-weight:500;color:var(--bordo);margin-bottom:10px;line-height:1.4">${esc(p.nome)}</h4>`;
+  content += `<div class="preview-row"><div class="preview-label">Área</div><div class="preview-val">${esc(p.area||'—')}</div></div>`;
+  if(!isBasic){
+    content += `
+      <div class="preview-row"><div class="preview-label">Tipo</div><div class="preview-val">${esc(p.tipo||'—')}</div></div>
+      <div class="preview-row"><div class="preview-label">Status</div><div class="preview-val">${esc(p.status||'—')}</div></div>
+      <div class="preview-row"><div class="preview-label">Quarter</div><div class="preview-val">${esc(p.q||'—')}</div></div>`;
+  } else {
+    content += `<div class="preview-row"><div class="preview-label">Prioridade</div><div class="preview-val">${esc(p.prio||'—')}</div></div>`;
+  }
+  content += `<div class="preview-row"><div class="preview-label">Descrição</div><div class="preview-val">${esc(desc||'Não preenchida')}</div></div>`;
+  content += `<div class="preview-row"><div class="preview-label">Benefício esperado</div><div class="preview-val">${esc(benef||'Não preenchido')}</div></div>`;
+  pop.innerHTML = content;
+  pop.style.display = 'block';
+  positionPopup(pop, event);
+}
+function positionPopup(pop, event){
+  const x = event.clientX, y = event.clientY;
+  const pw = pop.offsetWidth || 340, ph = pop.offsetHeight || 200;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = x + 12, top = y - 10;
+  if(left + pw > vw - 10) left = x - pw - 12;
+  if(top + ph > vh - 10) top = vh - ph - 10;
+  if(top < 10) top = 10;
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+}
+function hidePreview(){
+  document.getElementById('preview-popup').style.display='none';
+}
+document.addEventListener('click', e=>{
+  const pop = document.getElementById('preview-popup');
+  if(pop && !e.target.closest('.ibtn') && pop.style.display==='block'){
+    pop.style.display='none';
+  }
+});
+document.addEventListener('mousemove', e=>{
+  const pop = document.getElementById('preview-popup');
+  if(pop.style.display==='block') positionPopup(pop, e);
+});
+
 // ── SUPABASE AUTH ─────────────────────────────────────────
 async function checkAuth(){
   const {data:{session}} = await supa.auth.getSession();
@@ -1430,8 +1506,12 @@ supa.auth.onAuthStateChange((event, session) => {
 
 function showApp(user){
   document.getElementById('login-screen').style.display='none';
-  document.getElementById('user-email').textContent=user.email;
-  document.getElementById('btn-logout').style.display='block';
+  document.getElementById('main-content').style.display='block';
+  document.getElementById('main-nav').style.display='flex';
+  const uel = document.getElementById('user-email');
+  if(uel) uel.textContent=user.email;
+  const blo = document.getElementById('btn-logout');
+  if(blo) blo.style.display='block';
   loadAllData();
 }
 
@@ -1460,7 +1540,7 @@ function showLoginMsg(txt,color){
   el.style.color=color;el.style.display='block';
 }
 
-async function doLogout(){
+async async function doLogout(){
   await supa.auth.signOut();
   location.reload();
 }
