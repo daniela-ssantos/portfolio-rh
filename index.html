@@ -5,11 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Portfólio RH · 2026</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-const SUPA_URL = 'https://fotjzrkxrfpsirvlxvhq.supabase.co';
-const SUPA_KEY = 'sb_publishable_ych8CsaJQ-seuyLxPGRvlQ_1Fg3-GvZ';
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
-</script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -252,16 +247,16 @@ tr:hover td{background:#fdf5f8;}
 </head>
 <body>
 <!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bordo);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
+<div id="login-screen" style="display:flex;position:fixed;inset:0;background:var(--bordo);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
   <div style="background:var(--branco);border-radius:var(--rl);padding:36px 40px;width:100%;max-width:400px;border-top:4px solid var(--rosa);text-align:center;">
     <div style="width:48px;height:48px;background:var(--rosa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--bordo);margin:0 auto 16px;">RH</div>
     <h2 style="font-size:18px;font-weight:500;color:var(--bordo);margin-bottom:4px;">Portfólio de Projetos RH</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:24px;">Entre com seu e-mail para acessar</p>
     <div id="login-msg" style="display:none;padding:8px 12px;border-radius:var(--r);font-size:12px;margin-bottom:14px;"></div>
     <input type="email" id="login-email" placeholder="seu@email.com" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;">
-    <input type="password" id="login-pass" placeholder="Senha" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;outline:none;margin-bottom:14px;" onkeydown="if(event.key==='Enter')doLogin()">
-    <button onclick="doLogin()" style="width:100%;padding:11px;background:var(--bordo);color:var(--branco);border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;margin-bottom:10px;">Entrar</button>
-    <button onclick="doMagicLink()" style="width:100%;padding:11px;background:transparent;color:var(--bordo-luz);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:inherit;cursor:pointer;">Receber link de acesso por e-mail</button>
+    <input type="password" id="login-pass" placeholder="Senha" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;outline:none;margin-bottom:14px;" id="login-pass-input">
+    <button id="btn-login" style="width:100%;padding:11px;background:var(--bordo);color:var(--branco);border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;margin-bottom:10px;">Entrar</button>
+    <button id="btn-magic" style="width:100%;padding:11px;background:transparent;color:var(--bordo-luz);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:inherit;cursor:pointer;">Receber link de primeiro acesso por e-mail</button>
     <p id="magic-msg" style="display:none;font-size:12px;color:#1D9E75;margin-top:12px;">✓ Link enviado! Verifique seu e-mail.</p>
   </div>
 </div>
@@ -512,6 +507,11 @@ tr:hover td{background:#fdf5f8;}
 <div class="preview-popup" id="preview-popup" style="display:none"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+// ── SUPABASE INIT ─────────────────────────────────────────
+const SUPA_URL = 'https://fotjzrkxrfpsirvlxvhq.supabase.co';
+const SUPA_KEY = 'sb_publishable_ych8CsaJQ-seuyLxPGRvlQ_1Fg3-GvZ';
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+console.log('Supabase initialized:', !!supa);
 // ── CONSTANTS ─────────────────────────────────────────────
 const BIZ_CRITERIA=[
   {id:'risco',label:'Riscos e Conformidade',peso:5},
@@ -1489,13 +1489,40 @@ document.addEventListener('mousemove', e=>{
 
 // ── SUPABASE AUTH ─────────────────────────────────────────
 async function checkAuth(){
-  const {data:{session}} = await supa.auth.getSession();
-  if(session){
-    showApp(session.user);
-  } else {
-    document.getElementById('login-screen').style.display='flex';
+  // Show login by default - hide only if session found
+  document.getElementById('login-screen').style.display='flex';
+  try {
+    // Handle magic link / email confirmation redirect
+    const hash = window.location.hash;
+    if(hash && (hash.includes('access_token') || hash.includes('type=magiclink'))){
+      const {data,error} = await supa.auth.getSession();
+      if(data?.session){
+        window.location.hash = '';
+        showApp(data.session.user);
+        return;
+      }
+    }
+    const {data:{session},error} = await supa.auth.getSession();
+    console.log('Session check:', session ? 'active' : 'none', error ? 'error:'+error.message : '');
+    if(session){
+      showApp(session.user);
+    }
+    // else login screen stays visible
+  } catch(err) {
+    console.error('Auth error:', err);
+    // login screen stays visible
   }
 }
+
+supa.auth.onAuthStateChange((event, session) => {
+  if(event === 'SIGNED_IN' && session){
+    showApp(session.user);
+  } else if(event === 'SIGNED_OUT'){
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('main-content').style.display='none';
+    document.getElementById('main-nav').style.display='none';
+  }
+});
 
 // listen for auth state changes (handles magic link redirect)
 supa.auth.onAuthStateChange((event, session) => {
@@ -1505,9 +1532,12 @@ supa.auth.onAuthStateChange((event, session) => {
 });
 
 function showApp(user){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('main-content').style.display='block';
-  document.getElementById('main-nav').style.display='flex';
+  const login = document.getElementById('login-screen');
+  const main = document.getElementById('main-content');
+  const nav = document.getElementById('main-nav');
+  if(login) login.style.display='none';
+  if(main) main.style.display='block';
+  if(nav) nav.style.display='flex';
   const uel = document.getElementById('user-email');
   if(uel) uel.textContent=user.email;
   const blo = document.getElementById('btn-logout');
@@ -1516,28 +1546,54 @@ function showApp(user){
 }
 
 async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-pass').value;
-  const msg=document.getElementById('login-msg');
-  if(!email||!pass){showLoginMsg('Preencha e-mail e senha.','#b00');return;}
-  msg.style.display='none';
+  const email=(document.getElementById('login-email')?.value||'').trim();
+  const pass=document.getElementById('login-pass-input')?.value||'';
+  if(!email||!pass){showLoginMsg('Preencha e-mail e senha.','err');return;}
+  const btn=document.getElementById('btn-login');
+  if(btn){btn.textContent='Entrando...';btn.disabled=true;}
   const {data,error}=await supa.auth.signInWithPassword({email,password:pass});
-  if(error){showLoginMsg(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message,'#b00');}
-  else{showApp(data.user);}
+  if(btn){btn.textContent='Entrar';btn.disabled=false;}
+  if(error){
+    console.error('Login error:', error);
+    showLoginMsg('Erro: ' + error.message, 'err');
+  } else if(!data?.user){
+    console.error('No user in response:', data);
+    showLoginMsg('Erro inesperado. Verifique o console (F12).', 'err');
+  } else {
+    console.log('Login OK:', data.user.email);
+    showApp(data.user);
+  }
 }
 
 async function doMagicLink(){
-  const email=document.getElementById('login-email').value.trim();
-  if(!email){showLoginMsg('Informe seu e-mail primeiro.','#b00');return;}
-  const {error}=await supa.auth.signInWithOtp({email});
-  if(error){showLoginMsg(error.message,'#b00');}
-  else{document.getElementById('magic-msg').style.display='block';}
+  const email=(document.getElementById('login-email')?.value||'').trim();
+  if(!email){showLoginMsg('Informe seu e-mail antes de solicitar o link.','err');return;}
+  const btn=document.getElementById('btn-magic');
+  if(btn){btn.textContent='Enviando...';btn.disabled=true;}
+  // signInWithOtp works for both first access and password reset
+  const {error}=await supa.auth.signInWithOtp({
+    email,
+    options:{shouldCreateUser:false} // only works for pre-registered users
+  });
+  if(btn){btn.textContent='Receber link de primeiro acesso por e-mail';btn.disabled=false;}
+  if(error){
+    const msg=error.message.includes('not found')||error.message.includes('User not found')
+      ?'E-mail não encontrado. Solicite acesso ao administrador.'
+      :'Erro ao enviar link. Tente novamente.';
+    showLoginMsg(msg,'err');
+  } else {
+    showLoginMsg('✓ Link enviado! Verifique seu e-mail (pode cair no spam).','ok');
+  }
 }
 
-function showLoginMsg(txt,color){
+function showLoginMsg(txt,type){
   const el=document.getElementById('login-msg');
-  el.textContent=txt;el.style.background=color==='#b00'?'#fff0f0':'#e8f4f0';
-  el.style.color=color;el.style.display='block';
+  if(!el)return;
+  el.textContent=txt;
+  el.style.display='block';
+  if(type==='err'){el.style.background='#fff0f0';el.style.color='#b00';el.style.border='1px solid #ffcccc';}
+  else if(type==='ok'){el.style.background='#e8f4f0';el.style.color='#1D9E75';el.style.border='1px solid #9FE1CB';}
+  else{el.style.background='var(--bg)';el.style.color='var(--text2)';el.style.border='1px solid var(--border2)';}
 }
 
 async async function doLogout(){
@@ -1654,6 +1710,16 @@ async function updateQuarterDB(id, origem, quarter){
     await supa.from('projetos').update({quarter:quarter}).eq('id',id);
   }
 }
+
+// ── BIND LOGIN BUTTONS AFTER DOM READY ───────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btnLogin = document.getElementById('btn-login');
+  const btnMagic = document.getElementById('btn-magic');
+  const passInput = document.getElementById('login-pass-input');
+  if(btnLogin) btnLogin.addEventListener('click', doLogin);
+  if(btnMagic) btnMagic.addEventListener('click', doMagicLink);
+  if(passInput) passInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+});
 
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});}
 checkAuth();
