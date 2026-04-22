@@ -607,18 +607,22 @@ function clearFilters(){
 }
 function clearKFilters(){
   kSets.t.clear();kSets.o.clear();
+  areaSets.k.clear();
   document.querySelectorAll('[data-kt],[data-ko]').forEach(b=>b.classList.remove('sel'));
+  updMDDBtn('k');rebuildMDD('k');
   renderKanban();
 }
 function clearVFilters(){
-  vSets.q.clear();
+  vSets.q.clear();areaSets.v.clear();
   document.querySelectorAll('[data-vq]').forEach(b=>b.classList.remove('sel'));
-  document.getElementById('va').value='';
+  updMDDBtn('v');rebuildMDD('v');
   renderCarga();
 }
 function clearBasicFilters(){
-  document.getElementById('fba').value='';document.getElementById('sb').value='';
+  areaSets.b.clear();
+  document.getElementById('sb').value='';
   document.getElementById('acb').classList.remove('open');
+  updMDDBtn('b');rebuildMDD('b');
   renderBasic();
 }
 
@@ -1012,53 +1016,76 @@ function autoFillQ(){
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// ── AI ASSIST ─────────────────────────────────────────────
-async function aiImprove(field){
-  const isDesc=field==='desc';
-  const inputId=isDesc?'f-desc':'f-benef';
-  const btnId=isDesc?'ai-desc-btn':'ai-benef-btn';
-  const sugId=isDesc?'ai-desc-sug':'ai-benef-sug';
+// ── AI ASSIST via Google Gemini (gratuito) ───────────────
+const GEMINI_KEY='AIzaSyCzfhposF_5_BWuQD-lWIPMG9CYS60PPq8'; // Cole aqui sua chave do Google AI Studio (aistudio.google.com)
+
+async function aiH(field, inputId, btnId, sugId, nomeId){
   const text=(document.getElementById(inputId)?.value||'').trim();
   if(!text){toast('Escreva algo primeiro.');return;}
   const btn=document.getElementById(btnId);
   btn.classList.add('loading');btn.textContent='…';
   const sug=document.getElementById(sugId);
   sug.classList.remove('show');sug.innerHTML='';
-  const nome=(document.getElementById('f-nome')?.value||'').trim();
-  const isbenef=!isDesc;
-  const descText=isDesc?text:(document.getElementById('f-desc')?.value||'');
-  const prompt=isDesc
-    ?`Você é especialista em gestão de projetos de RH. Reescreva a descrição abaixo de forma mais clara, objetiva e completa para um painel de portfólio de projetos. Máximo 3 frases. Responda APENAS com a descrição melhorada, sem comentários ou explicações.\n\nProjeto: ${nome}\nDescrição atual: ${text}`
-    :`Você é especialista em gestão de projetos de RH. Com base na descrição do projeto, sugira um benefício econômico ou operacional esperado de forma clara e quantificável quando possível. Máximo 2 frases. Responda APENAS com o benefício sugerido, sem comentários.\n\nProjeto: ${nome}\nDescrição: ${descText}\nBenefício atual: ${text}`;
+  const nome=(document.getElementById(nomeId)?.value||'').trim();
+  const descText=field==='benef'
+    ?(document.getElementById('f-desc')?.value||document.getElementById('bf-desc')?.value||'')
+    :text;
+  const prompt=field==='desc'
+    ?`Você é especialista em gestão de projetos de RH. Reescreva a descrição abaixo de forma mais clara e completa para um painel de portfólio. Máximo 3 frases. Responda APENAS com a descrição melhorada.
+
+Projeto: ${nome}
+Descrição: ${text}`
+    :`Você é especialista em gestão de projetos de RH. Sugira um benefício econômico ou operacional esperado com base na descrição. Máximo 2 frases. Responda APENAS com o benefício.
+
+Projeto: ${nome}
+Descrição: ${descText}
+Benefício atual: ${text}`;
+  if(!GEMINI_KEY){
+    sug.innerHTML=`<div style="line-height:1.5;color:var(--text2)">Para ativar a IA gratuita, adicione sua chave do Google AI Studio na variável <code style="background:var(--bg);padding:2px 5px;border-radius:4px;font-size:11px">GEMINI_KEY</code> no início do script HTML.<br><br><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--bordo-luz);font-weight:500">Obter chave gratuita no Google AI Studio →</a></div>`;
+    sug.classList.add('show');
+    btn.classList.remove('loading');btn.textContent='✦';
+    return;
+  }
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})
-    });
-    if(!res.ok){throw new Error('API error '+res.status);}
+    const res=await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:300,temperature:0.7}})}
+    );
+    if(!res.ok)throw new Error(res.status);
     const data=await res.json();
-    const improved=(data.content?.[0]?.text||'').trim();
+    const improved=(data.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
     if(improved){
-      sug.innerHTML=`<div style="margin-bottom:6px;line-height:1.55">${esc(improved)}</div>
-        <div class="ai-actions">
-          <button class="ai-use" onclick="useAI('${inputId}','${sugId}')">Usar esta versão</button>
+      sug.innerHTML=`<div style="margin-bottom:5px;line-height:1.55">${esc(improved)}</div>
+        <div class="ai-acts">
+          <button class="ai-use" onclick="useAI('${inputId}','${sugId}')">Usar</button>
           <button class="ai-disc" onclick="document.getElementById('${sugId}').classList.remove('show')">Descartar</button>
         </div>`;
       sug.classList.add('show');
     }
   }catch(e){
-    sug.innerHTML=`<div style="color:var(--text3);font-size:12px">A IA está disponível quando o painel é aberto dentro do Claude.ai. Ao usar como arquivo HTML local, edite os textos manualmente.</div>`;
+    sug.innerHTML=`<div style="color:var(--text3)">Erro ao conectar. Verifique a chave GEMINI_KEY.</div>`;
     sug.classList.add('show');
   }
   btn.classList.remove('loading');btn.textContent='✦';
 }
-function useAI(inputId,sugId,btn){
-  const sug=document.getElementById(sugId);
-  const text=sug.querySelector('div')?.textContent||'';
-  document.getElementById(inputId).value=text;
-  sug.classList.remove('show');
+
+// alias usado pelos botões do modal basic
+async function aiImprove(field){ 
+  const isDesc=field==='desc';
+  await aiH(field, isDesc?'f-desc':'f-benef', isDesc?'ai-desc-btn':'ai-benef-btn', isDesc?'ai-desc-sug':'ai-benef-sug', 'f-nome');
 }
+async function aiImproveB(field){
+  const isDesc=field==='desc';
+  await aiH(field, isDesc?'bf-desc':'bf-benef', isDesc?'ai-bd-btn':'ai-bb-btn', isDesc?'ai-bds':'ai-bbs', 'bf-nome');
+}
+
+function useAI(inputId,sugId){
+  const s=document.getElementById(sugId);
+  document.getElementById(inputId).value=s.querySelector('div')?.textContent||'';
+  s.classList.remove('show');
+}
+
 
 // ── MODAL PROJETO ─────────────────────────────────────────
 function openModal(id){
