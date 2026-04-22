@@ -1119,7 +1119,7 @@ function validateFields(ids){
   });
   return ok;
 }
-function saveProjeto(){
+async function saveProjeto(){
   const req=['f-nome','f-desc','f-benef','f-area','f-prio'];
   if(currentFormType==='priorizado') req.push('f-tipo','f-status','f-end');
   if(!validateFields(req)){toast('Preencha todos os campos obrigatórios.');return;}
@@ -1231,7 +1231,7 @@ function useAIB(inputId,sugId){
   document.getElementById(inputId).value=text;
   sug.classList.remove('show');
 }
-function saveBasicItem(){
+async function saveBasicItem(){
   if(!validateFields(['bf-nome','bf-desc','bf-benef','bf-area','bf-prio'])){toast('Preencha todos os campos obrigatórios.');return;}
   const bizSc={},tiSc={};
   BIZ_CRITERIA.forEach(c=>{bizSc[c.id]=+(document.getElementById(`bbz-${c.id}`)?.value||0);});
@@ -1257,9 +1257,14 @@ function confirmDel(id,type){
     ?(basicItems.find(x=>x.id===id)?.nome||'esta iniciativa')
     :(projects.find(x=>x.id===id)?.nome||'este projeto');
   document.getElementById('confirm-msg').textContent=`Tem certeza que deseja excluir "${name}"? Esta ação não pode ser desfeita.`;
-  document.getElementById('confirm-yes').onclick=()=>{
-    if(type==='basic')basicItems=basicItems.filter(x=>x.id!==id);
-    else projects=projects.filter(x=>x.id!==id);
+  document.getElementById('confirm-yes').onclick=async()=>{
+    if(type==='basic'){
+      basicItems=basicItems.filter(x=>x.id!==id);
+      await deleteBasicDB(id);
+    } else {
+      projects=projects.filter(x=>x.id!==id);
+      await deleteProjetoDB(id);
+    }
     closeConfirm();renderAll();toast('Excluído com sucesso.');
   };
   document.getElementById('confirm-overlay').classList.add('open');
@@ -1416,6 +1421,13 @@ async function checkAuth(){
   }
 }
 
+// listen for auth state changes (handles magic link redirect)
+supa.auth.onAuthStateChange((event, session) => {
+  if(event === 'SIGNED_IN' && session){
+    showApp(session.user);
+  }
+});
+
 function showApp(user){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('user-email').textContent=user.email;
@@ -1460,25 +1472,61 @@ async function loadAllData(){
     supa.from('basic_items').select('*').order('id')
   ]);
 
-  if(pData&&pData.length){
+  if(pData && pData.length > 0){
     projects = pData.map(r=>({
       id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
       tipo:r.tipo||'Melhoria contínua', area:r.area||'', prio:r.prio||'Média',
       status:r.status||'Não iniciado', end:r.termino||'', q:r.quarter||'TBD',
       origem:r.origem||'priorizado'
     }));
+  } else {
+    // banco vazio — migrar dados iniciais
+    await seedInitialData();
   }
 
-  if(bData&&bData.length){
+  if(bData && bData.length > 0){
     basicItems = bData.map(r=>({
       id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
       area:r.area||'', prio:r.prio||'Média',
       bizScores:r.biz_scores||{}, tiScores:r.ti_scores||{},
       _q:r.quarter_override||null
     }));
+  } else if(pData && pData.length > 0) {
+    // projetos já existem, basic está vazio intencionalmente
+  } else {
+    await seedBasicData();
   }
 
   renderAll();
+}
+
+async function seedInitialData(){
+  toast('Carregando dados iniciais...');
+  const rows = projects.map(p=>({
+    nome:p.nome, descricao:p.desc||'', beneficio:p.benef||'',
+    tipo:p.tipo, area:p.area, prio:p.prio,
+    status:p.status, termino:p.end, quarter:p.q, origem:p.origem
+  }));
+  const {data} = await supa.from('projetos').insert(rows).select();
+  if(data) projects = data.map(r=>({
+    id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
+    tipo:r.tipo, area:r.area, prio:r.prio,
+    status:r.status, end:r.termino||'', q:r.quarter||'TBD', origem:r.origem
+  }));
+}
+
+async function seedBasicData(){
+  const rows = basicItems.map(b=>({
+    nome:b.nome, descricao:b.desc||'', beneficio:b.benef||'',
+    area:b.area, prio:b.prio,
+    biz_scores:b.bizScores||{}, ti_scores:b.tiScores||{}
+  }));
+  const {data} = await supa.from('basic_items').insert(rows).select();
+  if(data) basicItems = data.map(r=>({
+    id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
+    area:r.area, prio:r.prio,
+    bizScores:r.biz_scores||{}, tiScores:r.ti_scores||{}, _q:null
+  }));
 }
 
 async function saveProjetoToDB(data, id){
