@@ -1057,9 +1057,13 @@ Benefício atual: ${text}`;
           <button class="ai-disc" onclick="document.getElementById('${sugId}').classList.remove('show')">Descartar</button>
         </div>`;
       sug.classList.add('show');
+    } else {
+      const errMsg=data.error?.message||JSON.stringify(data).slice(0,120);
+      sug.innerHTML=`<div style="color:var(--text3);font-size:11px">Resposta inesperada da IA: ${esc(errMsg)}</div>`;
+      sug.classList.add('show');
     }
   }catch(e){
-    sug.innerHTML=`<div style="color:var(--text3)">Erro ao conectar com a IA. Tente novamente em instantes.</div>`;
+    sug.innerHTML=`<div style="color:var(--text3)">Erro ao conectar com a IA (${e.message}). Tente novamente.</div>`;
     sug.classList.add('show');
   }
   btn.classList.remove('loading');btn.textContent='✦';
