@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Portfólio RH · 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = 'https://fotjzrkxrfpsirvlxvhq.supabase.co';
+const SUPA_KEY = 'sb_publishable_ych8CsaJQ-seuyLxPGRvlQ_1Fg3-GvZ';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -1399,8 +1405,130 @@ document.addEventListener('click',e=>{
   }
 });
 
+
+// ── SUPABASE AUTH ─────────────────────────────────────────
+async function checkAuth(){
+  const {data:{session}} = await supa.auth.getSession();
+  if(session){
+    showApp(session.user);
+  } else {
+    document.getElementById('login-screen').style.display='flex';
+  }
+}
+
+function showApp(user){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('user-email').textContent=user.email;
+  document.getElementById('btn-logout').style.display='block';
+  loadAllData();
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const msg=document.getElementById('login-msg');
+  if(!email||!pass){showLoginMsg('Preencha e-mail e senha.','#b00');return;}
+  msg.style.display='none';
+  const {data,error}=await supa.auth.signInWithPassword({email,password:pass});
+  if(error){showLoginMsg(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message,'#b00');}
+  else{showApp(data.user);}
+}
+
+async function doMagicLink(){
+  const email=document.getElementById('login-email').value.trim();
+  if(!email){showLoginMsg('Informe seu e-mail primeiro.','#b00');return;}
+  const {error}=await supa.auth.signInWithOtp({email});
+  if(error){showLoginMsg(error.message,'#b00');}
+  else{document.getElementById('magic-msg').style.display='block';}
+}
+
+function showLoginMsg(txt,color){
+  const el=document.getElementById('login-msg');
+  el.textContent=txt;el.style.background=color==='#b00'?'#fff0f0':'#e8f4f0';
+  el.style.color=color;el.style.display='block';
+}
+
+async function doLogout(){
+  await supa.auth.signOut();
+  location.reload();
+}
+
+// ── SUPABASE DATA ─────────────────────────────────────────
+async function loadAllData(){
+  const [{data:pData},{data:bData}] = await Promise.all([
+    supa.from('projetos').select('*').order('id'),
+    supa.from('basic_items').select('*').order('id')
+  ]);
+
+  if(pData&&pData.length){
+    projects = pData.map(r=>({
+      id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
+      tipo:r.tipo||'Melhoria contínua', area:r.area||'', prio:r.prio||'Média',
+      status:r.status||'Não iniciado', end:r.termino||'', q:r.quarter||'TBD',
+      origem:r.origem||'priorizado'
+    }));
+  }
+
+  if(bData&&bData.length){
+    basicItems = bData.map(r=>({
+      id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
+      area:r.area||'', prio:r.prio||'Média',
+      bizScores:r.biz_scores||{}, tiScores:r.ti_scores||{},
+      _q:r.quarter_override||null
+    }));
+  }
+
+  renderAll();
+}
+
+async function saveProjetoToDB(data, id){
+  const row = {
+    nome:data.nome, descricao:data.desc, beneficio:data.benef,
+    tipo:data.tipo, area:data.area, prio:data.prio,
+    status:data.status, termino:data.end, quarter:data.q,
+    origem:data.origem, updated_at:new Date().toISOString()
+  };
+  if(id){
+    await supa.from('projetos').update(row).eq('id',id);
+  } else {
+    const {data:ins}=await supa.from('projetos').insert(row).select().single();
+    return ins?.id;
+  }
+}
+
+async function deleteProjetoDB(id){
+  await supa.from('projetos').delete().eq('id',id);
+}
+
+async function saveBasicToDB(data, id){
+  const row = {
+    nome:data.nome, descricao:data.desc, beneficio:data.benef,
+    area:data.area, prio:data.prio,
+    biz_scores:data.bizScores||{}, ti_scores:data.tiScores||{},
+    updated_at:new Date().toISOString()
+  };
+  if(id){
+    await supa.from('basic_items').update(row).eq('id',id);
+  } else {
+    const {data:ins}=await supa.from('basic_items').insert(row).select().single();
+    return ins?.id;
+  }
+}
+
+async function deleteBasicDB(id){
+  await supa.from('basic_items').delete().eq('id',id);
+}
+
+async function updateQuarterDB(id, origem, quarter){
+  if(origem==='basic'){
+    await supa.from('basic_items').update({quarter_override:quarter}).eq('id',id);
+  } else {
+    await supa.from('projetos').update({quarter:quarter}).eq('id',id);
+  }
+}
+
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});}
-renderAll();
+checkAuth();
 </script>
 </body>
 </html>
