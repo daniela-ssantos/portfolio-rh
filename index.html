@@ -254,10 +254,6 @@ tr:hover td{background:#fdf5f8;}
 </style>
 </head>
 <body>
-<!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:flex;position:fixed;inset:0;background:var(--bordo);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
-  <div style="background:var(--branco);border-radius:var(--rl);padding:36px 40px;width:100%;max-width:400px;border-top:4px solid var(--rosa);text-align:center;">
-    <div style="width:48px;height:48px;background:var(--rosa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--bordo);margin:0 auto 16px;">RH</div>
     <h2 style="font-size:18px;font-weight:500;color:var(--bordo);margin-bottom:4px;">Portfólio de Projetos RH</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:24px;">Entre com seu e-mail para acessar</p>
     <div id="login-msg" style="display:none;padding:8px 12px;border-radius:var(--r);font-size:12px;margin-bottom:14px;"></div>
@@ -275,14 +271,14 @@ tr:hover td{background:#fdf5f8;}
   </div>
   <span class="hright" id="last-update"></span>
 </header>
-<nav id="main-nav" style="display:none">
+<nav id="main-nav">
   <button class="ntab active" onclick="showTab('projetos',this)">Projetos</button>
   <button class="ntab" onclick="showTab('quarters',this)">Por Quarter</button>
   <button class="ntab" onclick="showTab('visao',this)">Capacidade & Demanda</button>
   <button class="ntab" onclick="showTab('basico',this)">Pipeline BASIC</button>
   <button class="ntab" onclick="showTab('priorizacao',this)">Priorização</button>
 </nav>
-<main id="main-content" style="display:none">
+<main id="main-content">
 <div class="metrics" id="metrics"></div>
 
 <!-- PROJETOS -->
@@ -761,6 +757,7 @@ function renderProjetos(){
   updateAreaFilter();
 }
 function renderTable(rows,groupByArea){
+  rows=applySortP(rows);
   const tbody=document.getElementById('tbp');
   if(!rows.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><strong>Nenhum resultado</strong>Ajuste os filtros ou adicione um projeto.</div></td></tr>`;return;}
   let lastArea=null;
@@ -1552,155 +1549,45 @@ function applySortB(rows){
   });
 }
 
-// ── SUPABASE AUTH ─────────────────────────────────────────
-async function checkAuth(){
-  // Show login by default - hide only if session found
-  document.getElementById('login-screen').style.display='flex';
-  try {
-    // Handle magic link / email confirmation redirect
-    const hash = window.location.hash;
-    if(hash && (hash.includes('access_token') || hash.includes('type=magiclink'))){
-      const {data,error} = await supa.auth.getSession();
-      if(data?.session){
-        window.location.hash = '';
-        showApp(data.session.user);
-        return;
-      }
-    }
-    const {data:{session},error} = await supa.auth.getSession();
-    console.log('Session check:', session ? 'active' : 'none', error ? 'error:'+error.message : '');
-    if(session){
-      showApp(session.user);
-    }
-    // else login screen stays visible
-  } catch(err) {
-    console.error('Auth error:', err);
-    // login screen stays visible
-  }
-}
-
-supa.auth.onAuthStateChange((event, session) => {
-  if(event === 'SIGNED_IN' && session){
-    showApp(session.user);
-  } else if(event === 'SIGNED_OUT'){
-    document.getElementById('login-screen').style.display='flex';
-    document.getElementById('main-content').style.display='none';
-    document.getElementById('main-nav').style.display='none';
-  }
-});
-
-// listen for auth state changes (handles magic link redirect)
-supa.auth.onAuthStateChange((event, session) => {
-  if(event === 'SIGNED_IN' && session){
-    showApp(session.user);
-  }
-});
-
-function showApp(user){
-  const login = document.getElementById('login-screen');
-  const main = document.getElementById('main-content');
-  const nav = document.getElementById('main-nav');
-  if(login) login.style.display='none';
-  if(main) main.style.display='block';
-  if(nav) nav.style.display='flex';
-  const uel = document.getElementById('user-email');
-  if(uel) uel.textContent=user.email;
-  const blo = document.getElementById('btn-logout');
-  if(blo) blo.style.display='block';
-  loadAllData();
-}
-
-async function doLogin(){
-  const email=(document.getElementById('login-email')?.value||'').trim();
-  const pass=document.getElementById('login-pass')?.value||'';
-  if(!email||!pass){showLoginMsg('Preencha e-mail e senha.','err');return;}
-  const btn=document.getElementById('btn-login');
-  if(btn){btn.textContent='Entrando...';btn.disabled=true;}
-  const {data,error}=await supa.auth.signInWithPassword({email,password:pass});
-  if(btn){btn.textContent='Entrar';btn.disabled=false;}
-  if(error){
-    console.error('Login error:', error);
-    showLoginMsg('Erro: ' + error.message, 'err');
-  } else if(!data?.user){
-    console.error('No user in response:', data);
-    showLoginMsg('Erro inesperado. Verifique o console (F12).', 'err');
-  } else {
-    console.log('Login OK:', data.user.email);
-    showApp(data.user);
-  }
-}
-
-async function doMagicLink(){
-  const email=(document.getElementById('login-email')?.value||'').trim();
-  if(!email){showLoginMsg('Informe seu e-mail antes de solicitar o link.','err');return;}
-  const btn=document.getElementById('btn-magic');
-  if(btn){btn.textContent='Enviando...';btn.disabled=true;}
-  // signInWithOtp works for both first access and password reset
-  const {error}=await supa.auth.signInWithOtp({
-    email,
-    options:{shouldCreateUser:false} // only works for pre-registered users
-  });
-  if(btn){btn.textContent='Receber link de primeiro acesso por e-mail';btn.disabled=false;}
-  if(error){
-    const msg=error.message.includes('not found')||error.message.includes('User not found')
-      ?'E-mail não encontrado. Solicite acesso ao administrador.'
-      :'Erro ao enviar link. Tente novamente.';
-    showLoginMsg(msg,'err');
-  } else {
-    showLoginMsg('✓ Link enviado! Verifique seu e-mail (pode cair no spam).','ok');
-  }
-}
-
-function showLoginMsg(txt,type){
-  const el=document.getElementById('login-msg');
-  if(!el)return;
-  el.textContent=txt;
-  el.style.display='block';
-  if(type==='err'){el.style.background='#fff0f0';el.style.color='#b00';el.style.border='1px solid #ffcccc';}
-  else if(type==='ok'){el.style.background='#e8f4f0';el.style.color='#1D9E75';el.style.border='1px solid #9FE1CB';}
-  else{el.style.background='var(--bg)';el.style.color='var(--text2)';el.style.border='1px solid var(--border2)';}
-}
-
-async function doLogout(){
-  await supa.auth.signOut();
-  location.reload();
-}
-
 // ── SUPABASE DATA ─────────────────────────────────────────
 async function loadAllData(){
-  const [{data:pData},{data:bData}] = await Promise.all([
-    supa.from('projetos').select('*').order('id'),
-    supa.from('basic_items').select('*').order('id')
-  ]);
+  try {
+    const [{data:pData,error:pErr},{data:bData,error:bErr}] = await Promise.all([
+      supa.from('projetos').select('*').order('id'),
+      supa.from('basic_items').select('*').order('id')
+    ]);
+    if(pErr) throw pErr;
+    if(bErr) throw bErr;
 
-  // Always start fresh from DB
-  projects = [];
-  basicItems = [];
-  if(pData && pData.length > 0){
-    projects = pData.map(r=>({
-      id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
-      tipo:r.tipo||'Melhoria contínua', area:r.area||'', prio:r.prio||'Média',
-      status:r.status||'Não iniciado', end:r.termino||'', q:r.quarter||'TBD',
-      origem:r.origem||'priorizado'
-    }));
-  } else {
-    // banco vazio — migrar dados iniciais
-    await seedInitialData();
+    // Always replace with fresh DB data
+    projects = [];
+    basicItems = [];
+
+    if(pData && pData.length > 0){
+      projects = pData.map(r=>({
+        id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
+        tipo:r.tipo||'Melhoria contínua', area:r.area||'', prio:r.prio||'Média',
+        status:r.status||'Não iniciado', end:r.termino||'', q:r.quarter||'TBD',
+        origem:r.origem||'priorizado'
+      }));
+    } else {
+      await seedInitialData();
+    }
+
+    if(bData && bData.length > 0){
+      basicItems = bData.map(r=>({
+        id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
+        area:r.area||'', prio:r.prio||'Média',
+        bizScores:r.biz_scores||{}, tiScores:r.ti_scores||{},
+        _q:r.quarter_override||null
+      }));
+    } else if(!pData || pData.length === 0){
+      await seedBasicData();
+    }
+  } catch(err){
+    console.error('DB error:', err);
+    // fall back to hardcoded data if DB fails
   }
-
-  if(bData && bData.length > 0){
-    basicItems = bData.map(r=>({
-      id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
-      area:r.area||'', prio:r.prio||'Média',
-      bizScores:r.biz_scores||{}, tiScores:r.ti_scores||{},
-      _q:r.quarter_override||null
-    }));
-  } else if(pData && pData.length > 0) {
-    // projetos já existem, basic está vazio intencionalmente
-  } else {
-    await seedBasicData();
-  }
-
   renderAll();
 }
 
@@ -1780,9 +1667,6 @@ async function updateQuarterDB(id, origem, quarter){
 }
 
 // ── BIND LOGIN BUTTONS AFTER DOM READY ───────────────────
-// buttons bound via inline onclick
-
-
 // ── EXPORT / IMPORT ───────────────────────────────────────
 function downloadTemplate(tipo){
   let cols, rows, filename;
@@ -1874,7 +1758,7 @@ async function importCSV(event){
 }
 
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});}
-checkAuth();
+loadAllData();
 </script>
 </body>
 </html>
