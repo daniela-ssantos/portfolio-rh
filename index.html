@@ -243,6 +243,14 @@ tr:hover td{background:#fdf5f8;}
 .preview-row:last-child{margin-bottom:0;}
 .preview-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
 .preview-val{font-size:12px;color:var(--text2);line-height:1.4;}
+
+.th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:background .12s;}
+.th-sort:hover{background:rgba(255,255,255,.15);}
+.th-sort::after{content:" ⇅";opacity:.35;font-size:10px;}
+.th-sort.asc{background:rgba(255,125,175,.25);}
+.th-sort.asc::after{content:" ↑";opacity:1;color:var(--rosa);}
+.th-sort.desc{background:rgba(255,125,175,.25);}
+.th-sort.desc::after{content:" ↓";opacity:1;color:var(--rosa);}
 </style>
 </head>
 <body>
@@ -319,13 +327,22 @@ tr:hover td{background:#fdf5f8;}
     <button class="fbtn clr" onclick="clearFilters()">✕ Limpar</button>
     <div class="tsep"></div>
     <button class="abtn" onclick="openModal()">+ Novo</button>
+    <button onclick="exportCSV()" style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo);border:1px solid var(--bordo);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↓ Exportar</button>
+    <button onclick="downloadTemplate('priorizado')" style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--cinza);border:1px solid var(--cinza);border-radius:var(--r);cursor:pointer;white-space:nowrap;" title="Baixar modelo para importação">📋 Template</button>
+    <label style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo-luz);border:1px solid var(--bordo-luz);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↑ Importar<input type="file" accept=".csv" style="display:none" onchange="importCSV(event)"></label>
   </div>
   <div class="twrap">
     <table>
       <thead><tr>
-        <th style="width:28px">#</th><th>Iniciativa</th><th>Tipo</th>
-        <th>Área</th><th>Status</th><th>Previsão</th><th>Quarter</th><th>Origem</th>
-        <th style="width:68px"></th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="id" onclick="sortTable('p','id')" style="width:28px">#</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="nome" onclick="sortTable('p','nome')">Iniciativa</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="tipo" onclick="sortTable('p','tipo')">Tipo</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="area" onclick="sortTable('p','area')">Área</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="status" onclick="sortTable('p','status')">Status</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="end" onclick="sortTable('p','end')">Previsão</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="q" onclick="sortTable('p','q')">Quarter</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="origem" onclick="sortTable('p','origem')">Origem</th>
+        <th style="width:78px"></th>
       </tr></thead>
       <tbody id="tbp"></tbody>
     </table>
@@ -335,6 +352,12 @@ tr:hover td{background:#fdf5f8;}
 <!-- QUARTERS -->
 <div class="sec" id="tab-quarters">
   <div class="toolbar">
+    <div class="sw" style="max-width:220px">
+      <svg class="si" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+      <input type="text" id="sk" placeholder="Buscar no kanban..." oninput="acSearch('sk','ack')" autocomplete="off" onfocus="acSearch('sk','ack')">
+      <div class="acl" id="ack"></div>
+    </div>
+    <div class="tsep"></div>
     <span class="flbl">Área</span>
     <div class="mdd-wrap">
       <button class="fbtn mdd-btn" id="mdd-btn-k" onclick="openMDD('k')">Todas ▾</button>
@@ -765,7 +788,9 @@ function renderTable(rows,groupByArea){
 
 // ── KANBAN with touch drag ────────────────────────────────
 function renderKanban(){
+  const sk=(document.getElementById('sk')?.value||'').toLowerCase();
   const all=allProjectRows().filter(p=>{
+    if(sk&&!p.nome.toLowerCase().includes(sk))return false;
     if(areaSets.k.size&&!areaSets.k.has(p.area))return false;
     if(kSets.t.size&&![...kSets.t].some(v=>p.tipo.toLowerCase().includes(v.toLowerCase())))return false;
     if(kSets.o.size&&!kSets.o.has(p.origem))return false;
@@ -779,7 +804,7 @@ function renderKanban(){
       <div class="kch ${cd.cls}"><h3 style="color:${cd.color}">${cd.label}</h3><span class="kcount">${groups[qk].length}</span></div>
       <div class="kdz" id="kdz-${qk}" ondragover="event.preventDefault();this.classList.add('da')" ondragleave="this.classList.remove('da')" ondrop="dropCard(event,'${qk}')">
         ${groups[qk].map(p=>`
-        <div class="kcard" draggable="true" data-id="${p.id}" data-orig="${p.origem}" ondragstart="dragStart(event)" ondragend="dragEnd(event)">
+        <div class="kcard" draggable="true" data-id="${p.id}" data-orig="${p.origem}" ondragstart="dragStart(event)" ondragend="dragEnd(event)" ondblclick="${p.origem==='basic'?`openModalBasic(basicItems.find(x=>x.id===${p.id}))`:`openModal(${p.id})`}" title="Clique duplo para editar">
           <div class="kt">${p.nome}</div>
           <div class="km">${tipoBadge(p)}<span>·</span>${p.area}${p.origem==='basic'?'<span class="badge b-b" style="font-size:9px;padding:2px 5px">BASIC</span>':''}</div>
         </div>`).join('')}
@@ -787,6 +812,8 @@ function renderKanban(){
     </div>`).join('');
   
   initTouchDrag();
+
+  initTouch();
 }
 
 let dragId=null,dragOrig=null;
@@ -802,7 +829,7 @@ function dropCard(e,newQ){
 }
 
 // Touch drag support for mobile
-function initTouchDrag(){
+function initTouch(){
   let ghost=null,touchId=null,touchItem=null,touchOrig=null;
   document.querySelectorAll('.kcard').forEach(card=>{
     card.addEventListener('touchstart',e=>{
@@ -894,16 +921,17 @@ function renderCarga(){
 // ── BASIC TABLE ───────────────────────────────────────────
 function renderBasic(){
   const s=(document.getElementById('sb')?.value||'').toLowerCase();
-  const area=document.getElementById('fba')?.value||'';
   const rows=basicItems.filter(b=>{
-    if(area&&b.area!==area)return false;
+    if(areaSets.b&&areaSets.b.size&&!areaSets.b.has(b.area))return false;
     if(s&&!b.nome.toLowerCase().includes(s))return false;
     return true;
   });
   const wB=+document.getElementById('wB').value;
+  rows = applySortB(rows);
+  const sortedRows=applySortB(rows);
   const tbody=document.getElementById('tbb');
-  if(!rows.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><strong>Nenhum resultado</strong></div></td></tr>`;return;}
-  tbody.innerHTML=rows.map(b=>{
+  if(!sortedRows.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><strong>Nenhum resultado</strong></div></td></tr>`;return;}
+  tbody.innerHTML=sortedRows.map(b=>{
     const biz=calcBizScore(b.bizScores);
     const ti=calcTIScore(b.tiScores);
     const tot=calcTotal(biz,ti,wB);
@@ -1487,6 +1515,43 @@ document.addEventListener('mousemove', e=>{
   if(pop.style.display==='block') positionPopup(pop, e);
 });
 
+
+// ── TABLE SORTING ─────────────────────────────────────────
+const sortState = {p:{col:null,dir:1}, b:{col:null,dir:1}};
+
+function sortTable(tableKey, col){
+  const st = sortState[tableKey];
+  if(st.col === col){ st.dir *= -1; }
+  else { st.col = col; st.dir = 1; }
+  // Update header UI
+  document.querySelectorAll(`[data-sort-table="${tableKey}"]`).forEach(th=>{
+    th.classList.remove('asc','desc');
+    if(th.dataset.sortCol === col) th.classList.add(st.dir===1?'asc':'desc');
+  });
+  if(tableKey==='p') rP();
+  else rB();
+}
+
+function applySortP(rows){
+  const {col,dir} = sortState.p;
+  if(!col) return rows;
+  return [...rows].sort((a,b)=>{
+    let av=a[col]||'', bv=b[col]||'';
+    if(col==='id') return (a.id-b.id)*dir;
+    return String(av).localeCompare(String(bv),'pt-BR')*dir;
+  });
+}
+function applySortB(rows){
+  const {col,dir} = sortState.b;
+  if(!col) return rows;
+  return [...rows].sort((a,b)=>{
+    if(col==='biz') return (calcBizScore(a.bizScores)-calcBizScore(b.bizScores))*dir;
+    if(col==='ti'){const at=calcTIScore(a.tiScores)??-1,bt=calcTIScore(b.tiScores)??-1;return(at-bt)*dir;}
+    let av=a[col]||'',bv=b[col]||'';
+    return String(av).localeCompare(String(bv),'pt-BR')*dir;
+  });
+}
+
 // ── SUPABASE AUTH ─────────────────────────────────────────
 async function checkAuth(){
   // Show login by default - hide only if session found
@@ -1596,7 +1661,7 @@ function showLoginMsg(txt,type){
   else{el.style.background='var(--bg)';el.style.color='var(--text2)';el.style.border='1px solid var(--border2)';}
 }
 
-async async function doLogout(){
+async function doLogout(){
   await supa.auth.signOut();
   location.reload();
 }
@@ -1608,6 +1673,9 @@ async function loadAllData(){
     supa.from('basic_items').select('*').order('id')
   ]);
 
+  // Always start fresh from DB
+  projects = [];
+  basicItems = [];
   if(pData && pData.length > 0){
     projects = pData.map(r=>({
       id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
@@ -1713,6 +1781,97 @@ async function updateQuarterDB(id, origem, quarter){
 
 // ── BIND LOGIN BUTTONS AFTER DOM READY ───────────────────
 // buttons bound via inline onclick
+
+
+// ── EXPORT / IMPORT ───────────────────────────────────────
+function downloadTemplate(tipo){
+  let cols, rows, filename;
+  if(tipo==='priorizado'){
+    cols=['origem','nome','descricao','beneficio','tipo_projeto','area','prioridade','status','termino','quarter'];
+    rows=[
+      ['Priorizado','Nome do Projeto','Descrição da iniciativa','Benefício esperado','Projeto Estruturante','Benefícios','Alta','Não iniciado','jun/26','Q2'],
+      ['Priorizado','Outro Projeto Exemplo','Descrição aqui','Benefício aqui','Melhoria contínua','Atendimento','Média','Em andamento','set/26','Q3'],
+    ];
+    filename='template-priorizados.csv';
+  } else {
+    cols=['origem','nome','descricao','beneficio','area','prioridade'];
+    rows=[
+      ['BASIC','Nome da Iniciativa BASIC','Descrição da iniciativa','Benefício esperado','Remuneração','Alta'],
+      ['BASIC','Outra Iniciativa BASIC','Descrição aqui','Benefício aqui','DHO','Média'],
+    ];
+    filename='template-basic.csv';
+  }
+  const csvRows=[cols.join(';'),...rows.map(r=>r.map(v=>v.includes(';')?'"'+v+'"':v).join(';'))];
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csvRows.join('\r\n'));
+  a.download=filename;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  toast('Template baixado!');
+}
+
+function exportCSV(){
+  const allP = [
+    ...projects.map(p=>({
+      tipo:'Priorizado', id:p.id, nome:p.nome, descricao:p.desc||'',
+      beneficio:p.benef||'', tipo_projeto:p.tipo, area:p.area,
+      prioridade:p.prio, status:p.status, termino:p.end, quarter:p.q
+    })),
+    ...basicItems.map(b=>({
+      tipo:'BASIC', id:b.id, nome:b.nome, descricao:b.desc||'',
+      beneficio:b.benef||'', tipo_projeto:'Melhoria contínua', area:b.area,
+      prioridade:b.prio, status:'Não iniciado', termino:'TBD',
+      quarter:b._q||'TBD',
+      score_negocio:calcBizScore(b.bizScores),
+      score_ti:calcTIScore(b.tiScores)||'Aguarda TI'
+    }))
+  ];
+  const cols = ['tipo','id','nome','descricao','beneficio','tipo_projeto','area','prioridade','status','termino','quarter','score_negocio','score_ti'];
+  const esc = v => v==null?'':'"'+String(v).replace(/"/g,'""')+'"';
+  const rows = [cols.join(','), ...allP.map(r=>cols.map(c=>esc(r[c])).join(','))];
+  const a2=document.createElement('a');a2.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.join('\r\n'));a2.download='portfolio-rh-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a2);a2.click();document.body.removeChild(a2)
+  toast('Exportado com sucesso.');
+}
+
+async function importCSV(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length < 2){ toast('Arquivo vazio ou inválido.'); return; }
+  const headers = lines[0].replace(/^\uFEFF/,'').split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  const getCol = (row, name) => {
+    const idx = headers.indexOf(name);
+    if(idx<0) return '';
+    const parts = row.match(/(".*?"|[^,]+)(?=,|$)/g)||[];
+    return (parts[idx]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim();
+  };
+  let added = 0, skipped = 0;
+  for(let i=1;i<lines.length;i++){
+    const row = lines[i];
+    if(!row.trim()) continue;
+    const nome = getCol(row,'nome');
+    if(!nome){ skipped++; continue; }
+    const tipo = getCol(row,'tipo')||'Priorizado';
+    const area = getCol(row,'area')||AREAS[0];
+    if(tipo.toLowerCase()==='basic'){
+      if(!basicItems.find(b=>b.nome===nome)){
+        const newId = await saveBasicToDB({nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),area,prio:getCol(row,'prioridade')||'Média',bizScores:{},tiScores:{}},null);
+        basicItems.push({id:newId||nextId++,nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),area,prio:getCol(row,'prioridade')||'Média',bizScores:{},tiScores:{}});
+        added++;
+      } else skipped++;
+    } else {
+      if(!projects.find(p=>p.nome===nome)){
+        const data={nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),tipo:getCol(row,'tipo_projeto')||'Melhoria contínua',area,prio:getCol(row,'prioridade')||'Média',status:getCol(row,'status')||'Não iniciado',end:getCol(row,'termino')||'',q:getCol(row,'quarter')||'TBD',origem:'priorizado'};
+        const newId = await saveProjetoToDB(data,null);
+        projects.push({id:newId||nextId++,...data});
+        added++;
+      } else skipped++;
+    }
+  }
+  event.target.value='';
+  renderAll();
+  toast(`Importados: ${added} | Ignorados (duplicados): ${skipped}`);
+}
 
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});}
 checkAuth();
