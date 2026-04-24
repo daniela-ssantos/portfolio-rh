@@ -247,10 +247,10 @@ tr:hover td{background:#fdf5f8;}
 .th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:background .12s;}
 .th-sort:hover{background:rgba(255,255,255,.15);}
 .th-sort::after{content:" ⇅";opacity:.35;font-size:10px;}
-.th-sort.asc{background:rgba(255,125,175,.25);}
-.th-sort.asc::after{content:" ↑";opacity:1;color:var(--rosa);}
-.th-sort.desc{background:rgba(255,125,175,.25);}
-.th-sort.desc::after{content:" ↓";opacity:1;color:var(--rosa);}
+.th-sort.asc{background:#662046;}
+.th-sort.asc::after{content:" ↑";opacity:1;color:#fff;}
+.th-sort.desc{background:#662046;}
+.th-sort.desc::after{content:" ↓";opacity:1;color:#fff;}
 </style>
 </head>
 <body>
@@ -932,13 +932,14 @@ function renderCarga(){
 function renderBasic(){
   const s=(document.getElementById('sb')?.value||'').toLowerCase();
   const rows=basicItems.filter(b=>{
-    if(areaSets.b&&areaSets.b.size&&!areaSets.b.has(b.area))return false;
+    try{if(areaSets&&areaSets.b&&areaSets.b.size&&!areaSets.b.has(b.area))return false;}catch(e){}
     if(s&&!b.nome.toLowerCase().includes(s))return false;
     return true;
   });
   const wB=+(document.getElementById('wB')?.value||50);
   rows = applySortB(rows);
   const sortedRows=applySortB(rows);
+  console.log('renderBasic: basicItems=',basicItems.length,'rows=',rows.length,'sorted=',sortedRows.length);
   const tbody=document.getElementById('tbb');
   if(!sortedRows.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><strong>Nenhum resultado</strong></div></td></tr>`;return;}
   tbody.innerHTML=sortedRows.map(b=>{
@@ -1538,8 +1539,8 @@ function sortTable(tableKey, col){
     th.classList.remove('asc','desc');
     if(th.dataset.sortCol === col) th.classList.add(st.dir===1?'asc':'desc');
   });
-  if(tableKey==='p') rP();
-  else rB();
+  if(tableKey==='p') renderProjetos();
+  else renderBasic();
 }
 
 function applySortP(rows){
