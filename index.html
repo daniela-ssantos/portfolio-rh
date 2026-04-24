@@ -728,15 +728,32 @@ let mMode=null;
 function mFilter(mode){
   document.querySelectorAll('.metric').forEach(m=>m.classList.remove('af'));
   if(mMode===mode){mMode=null;clearFilters();return;}
-  mMode=mode; clearFilters();
-  if(mode==='priorizado'){document.getElementById('m-total').classList.add('af');fSets.o.add('priorizado');document.querySelector('[data-fo="priorizado"]').classList.add('sel');}
-  else if(mode==='basic'){document.getElementById('m-basic').classList.add('af');fSets.o.add('basic');document.querySelector('[data-fo="basic"]').classList.add('sel');}
-  else if(mode==='andamento'){document.getElementById('m-and').classList.add('af');}
-  else if(mode==='area'){document.getElementById('m-area').classList.add('af');}
-  showTab('projetos',document.querySelector('.ntab'));
-  if(mode==='andamento'){const rows=allProjectRows().filter(p=>p.status==='Em andamento');renderTable(rows);return;}
-  if(mode==='area'){const rows=[...allProjectRows()].sort((a,b)=>a.area.localeCompare(b.area));renderTable(rows,true);return;}
-  renderProjetos();
+  mMode=mode;
+  clearFilters();
+  // Route to correct tab based on mode
+  if(mode==='priorizado'){
+    document.getElementById('m-total').classList.add('af');
+    fSets.o.add('priorizado');
+    document.querySelector('[data-fo="priorizado"]')?.classList.add('sel');
+    showTab('projetos', document.querySelector('.ntab'));
+    renderProjetos();
+  } else if(mode==='basic'){
+    document.getElementById('m-basic').classList.add('af');
+    fSets.o.add('basic');
+    document.querySelector('[data-fo="basic"]')?.classList.add('sel');
+    showTab('basico', document.querySelectorAll('.ntab')[3]);
+    renderBasic();
+  } else if(mode==='andamento'){
+    document.getElementById('m-and').classList.add('af');
+    showTab('projetos', document.querySelector('.ntab'));
+    const rows=allProjectRows().filter(p=>p.status==='Em andamento');
+    renderTable(rows);
+  } else if(mode==='area'){
+    document.getElementById('m-ar').classList.add('af');
+    showTab('projetos', document.querySelector('.ntab'));
+    const rows=[...allProjectRows()].sort((a,b)=>a.area.localeCompare(b.area));
+    renderTable(rows,true);
+  }
 }
 
 function allProjectRows(){
@@ -919,7 +936,7 @@ function renderBasic(){
     if(s&&!b.nome.toLowerCase().includes(s))return false;
     return true;
   });
-  const wB=+document.getElementById('wB').value;
+  const wB=+(document.getElementById('wB')?.value||50);
   rows = applySortB(rows);
   const sortedRows=applySortB(rows);
   const tbody=document.getElementById('tbb');
@@ -957,7 +974,7 @@ function syncW(from){
 }
 const QUAD_ORDER=['Priorizar','Planejar','Avaliar','Diferir','Aguarda TI'];
 function renderPrio(){
-  const wB=+document.getElementById('wB').value;
+  const wB=+(document.getElementById('wB')?.value||50);
   const scored=basicItems.map(b=>{
     const biz=calcBizScore(b.bizScores);
     const ti=calcTIScore(b.tiScores);
