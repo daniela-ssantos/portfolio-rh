@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · 2026</title>
+<title>Portfólio RH · 2026 · v11</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -244,9 +244,9 @@ tr:hover td{background:#fdf5f8;}
 .preview-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
 .preview-val{font-size:12px;color:var(--text2);line-height:1.4;}
 
-.th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:background .12s;}
-.th-sort:hover{background:rgba(255,255,255,.15);}
-.th-sort::after{content:" ⇅";opacity:.35;font-size:10px;}
+.th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:background .15s;}
+.th-sort:hover{background:#662046;color:#fff;}
+.th-sort::after{content:" ⇅";opacity:.5;font-size:10px;}
 .th-sort.asc{background:#662046;}
 .th-sort.asc::after{content:" ↑";opacity:1;color:#fff;}
 .th-sort.desc{background:#662046;}
@@ -257,7 +257,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v11</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -435,9 +435,13 @@ tr:hover td{background:#fdf5f8;}
   <div class="twrap">
     <table>
       <thead><tr>
-        <th>Iniciativa</th><th>Área</th><th>Prioridade</th>
-        <th>Score Negócio</th><th>Score TI</th><th>Score Total</th><th>Quadrante</th>
-        <th style="width:68px"></th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="nome" onclick="sortTable('b','nome')">Iniciativa</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="area" onclick="sortTable('b','area')">Área</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="prio" onclick="sortTable('b','prio')">Prioridade</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="biz" onclick="sortTable('b','biz')">Score Negócio</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="ti" onclick="sortTable('b','ti')">Score TI</th>
+        <th>Score Total</th><th>Quadrante</th>
+        <th style="width:78px"></th>
       </tr></thead>
       <tbody id="tbb"></tbody>
     </table>
@@ -641,13 +645,20 @@ function toggleVF(dim,val,btn){
   renderCarga();
 }
 function clearFilters(){
-  fSets.q.clear();fSets.t.clear();fSets.o.clear();areaSets.p.clear();updMDDBtn("p");
-  document.querySelectorAll('[data-fq],[data-ft],[data-fo]').forEach(b=>b.classList.remove('sel'));
-  document.getElementById('sp').value='';
-  document.getElementById('acp').classList.remove('open');
+  // Clear all filter sets
+  fSets.q.clear();fSets.t.clear();fSets.o.clear();
+  kSets.t.clear();kSets.o.clear();
+  Object.keys(areaSets).forEach(k=>areaSets[k].clear());
+  // Reset all filter buttons
+  document.querySelectorAll('[data-fq],[data-ft],[data-fo],[data-kt],[data-ko]').forEach(b=>b.classList.remove('sel'));
+  // Reset search
+  const sp=document.getElementById('sp');if(sp)sp.value='';
+  const sb=document.getElementById('sb');if(sb)sb.value='';
+  document.querySelectorAll('.acl').forEach(a=>a.classList.remove('open'));
+  // Reset metric highlights
   document.querySelectorAll('.metric').forEach(m=>m.classList.remove('af'));
-  updAreaBtn('area-checks','area-toggle-btn',fSets.area,allAreas());
-  renderProjetos();
+  // Reset MDD buttons
+  ['p','k','v','b'].forEach(k=>updMDDBtn(k));
 }
 function clearKFilters(){
   kSets.t.clear();kSets.o.clear();
@@ -727,33 +738,39 @@ function renderMetrics(){
 let mMode=null;
 function mFilter(mode){
   document.querySelectorAll('.metric').forEach(m=>m.classList.remove('af'));
-  if(mMode===mode){mMode=null;clearFilters();return;}
+  if(mMode===mode){mMode=null;clearFilters();refreshCurrentTab();return;}
   mMode=mode;
   clearFilters();
-  // Route to correct tab based on mode
   if(mode==='priorizado'){
-    document.getElementById('m-total').classList.add('af');
+    document.getElementById('m-total')?.classList.add('af');
     fSets.o.add('priorizado');
     document.querySelector('[data-fo="priorizado"]')?.classList.add('sel');
-    showTab('projetos', document.querySelector('.ntab'));
-    renderProjetos();
+    kSets.o.add('priorizado');
+    document.querySelector('[data-ko="priorizado"]')?.classList.add('sel');
   } else if(mode==='basic'){
-    document.getElementById('m-basic').classList.add('af');
+    document.getElementById('m-basic')?.classList.add('af');
     fSets.o.add('basic');
     document.querySelector('[data-fo="basic"]')?.classList.add('sel');
-    showTab('basico', document.querySelectorAll('.ntab')[3]);
-    renderBasic();
+    kSets.o.add('basic');
+    document.querySelector('[data-ko="basic"]')?.classList.add('sel');
   } else if(mode==='andamento'){
-    document.getElementById('m-and').classList.add('af');
-    showTab('projetos', document.querySelector('.ntab'));
-    const rows=allProjectRows().filter(p=>p.status==='Em andamento');
-    renderTable(rows);
+    document.getElementById('m-and')?.classList.add('af');
   } else if(mode==='area'){
-    document.getElementById('m-ar').classList.add('af');
-    showTab('projetos', document.querySelector('.ntab'));
-    const rows=[...allProjectRows()].sort((a,b)=>a.area.localeCompare(b.area));
-    renderTable(rows,true);
+    document.getElementById('m-ar')?.classList.add('af');
   }
+  refreshCurrentTab();
+}
+
+function refreshCurrentTab(){
+  const activeId=document.querySelector('.sec.active')?.id?.replace('tab-','')||'projetos';
+  if(activeId==='projetos'){
+    if(mMode==='andamento') renderTable(allProjectRows().filter(p=>p.status==='Em andamento'));
+    else if(mMode==='area') renderTable([...allProjectRows()].sort((a,b)=>a.area.localeCompare(b.area,'pt-BR')),true);
+    else renderProjetos();
+  } else if(activeId==='quarters') renderKanban();
+  else if(activeId==='visao') renderCarga();
+  else if(activeId==='basico') renderBasic();
+  else if(activeId==='priorizacao') renderPrio();
 }
 
 function allProjectRows(){
@@ -892,6 +909,7 @@ function renderCarga(){
     ...projects.map(p=>({...p})),
     ...basicItems.map(b=>({id:b.id,nome:b.nome,tipo:'Melhoria contínua',area:b.area,q:b._q||'TBD',origem:'basic'}))
   ].filter(p=>{
+    if(fSets.o.size&&!fSets.o.has(p.origem))return false;
     if(vSets.q.size&&!vSets.q.has(p.q))return false;
     if(areaSets.v.size&&!areaSets.v.has(p.area))return false;
     return true;
@@ -937,7 +955,6 @@ function renderBasic(){
     return true;
   });
   const wB=+(document.getElementById('wB')?.value||50);
-  rows = applySortB(rows);
   const sortedRows=applySortB(rows);
   console.log('renderBasic: basicItems=',basicItems.length,'rows=',rows.length,'sorted=',sortedRows.length);
   const tbody=document.getElementById('tbb');
@@ -1351,7 +1368,10 @@ function showTab(id,btn){
   btn.classList.add('active');
   if(id==='visao')renderCarga();
   if(id==='priorizacao')renderPrio();
-  if(id==='basico')renderBasic();
+  if(id==='basico'){
+    buildAreaChecks('barea-checks',areaSets.b,allBasicAreas(),"'barea-checks'");
+    renderBasic();
+  }
   if(id==='quarters')renderKanban();
 }
 
@@ -1566,12 +1586,15 @@ function applySortB(rows){
 // ── SUPABASE DATA ─────────────────────────────────────────
 async function loadAllData(){
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 8000);
     const [{data:pData,error:pErr},{data:bData,error:bErr}] = await Promise.all([
       supa.from('projetos').select('*').order('id'),
       supa.from('basic_items').select('*').order('id')
     ]);
-    if(pErr) throw pErr;
-    if(bErr) throw bErr;
+    clearTimeout(timeout);
+    if(pErr){console.error('DB error projetos:', JSON.stringify(pErr)); throw pErr;}
+    if(bErr){console.error('DB error basic:', JSON.stringify(bErr)); throw bErr;}
 
     // Always replace with fresh DB data
     projects = [];
@@ -1599,8 +1622,9 @@ async function loadAllData(){
       await seedBasicData();
     }
   } catch(err){
-    console.error('DB error:', err);
-    // fall back to hardcoded data if DB fails
+    console.error('DB error:', JSON.stringify(err));
+    toast('Erro ao carregar dados. Usando dados locais.');
+    // Keep hardcoded data - do not clear projects/basicItems
   }
   renderAll();
 }
