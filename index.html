@@ -675,17 +675,17 @@ async function exportExecutivo(){
     // Status donut
     panelR(sl,8.70,r3Y,4.42,r3H); accentL(sl,8.70,r3Y,r3H);
     sl.addText("Status do Portfólio",{x:8.87,y:r3Y+0.12,w:4.1,h:0.26,fontSize:9,bold:true,color:C.bordo,fontFace:"Calibri"});
-    sl.addChart(pres.ChartType.doughnut,[{name:"Status",labels:["Em andamento","Não iniciado","Concluído"],values:[andamento,nIniciado,concluido]}],{
-      x:8.78,y:r3Y+0.36,w:4.24,h:1.52,
-      chartColors:[C.azul,C.cinzaS,C.verde],
-      chartArea:{fill:{color:C.branco},border:{color:C.branco}},
-      plotArea:{fill:{color:C.branco}},
-      showLegend:false,showPercent:false,showValue:false,holeSize:60,
+    // Status visual sem chart (sem risco de corrupção)
+    sl.addShape(pres.ShapeType.roundRect,{x:8.88,y:r3Y+0.42,w:4.12,h:1.42,fill:{color:"F5F3F8"},line:{color:"EEECF2",width:1},rectRadius:0.12});
+    sl.addText(String(total),{x:8.88,y:r3Y+0.52,w:4.12,h:0.65,fontSize:44,bold:true,color:C.bordo,align:"center",fontFace:"Calibri"});
+    sl.addText("INICIATIVAS NO PORTFÓLIO",{x:8.88,y:r3Y+1.18,w:4.12,h:0.22,fontSize:7.5,color:C.cinza,align:"center",fontFace:"Calibri",charSpacing:1});
+    const barTY=r3Y+1.52,barTX=8.96,barTW=3.96,barTH=0.25;let bxT=barTX;
+    [{v:andamento,c:C.azul},{v:nIniciado,c:C.cinzaS},{v:concluido,c:C.verde}].forEach(sg=>{
+      if(sg.v<=0)return;const sw=(sg.v/total)*barTW;
+      sl.addShape(pres.ShapeType.rect,{x:bxT,y:barTY,w:sw,h:barTH,fill:{color:sg.c},line:{color:sg.c,width:0}});bxT+=sw;
     });
-    sl.addText(String(total),{x:9.8,y:r3Y+0.78,w:2.2,h:0.5,fontSize:24,bold:true,color:C.bordo,align:"center",fontFace:"Calibri"});
-    sl.addText("iniciativas",{x:9.8,y:r3Y+1.24,w:2.2,h:0.22,fontSize:8.5,color:C.cinza,align:"center",fontFace:"Calibri"});
     [{v:andamento,l:"Em Andamento",c:C.azul},{v:nIniciado,l:"Não Iniciado",c:C.cinzaS},{v:concluido,l:"Concluído",c:C.verde}].forEach((st,i)=>{
-      const ly=r3Y+1.98+i*0.30;
+      const ly=r3Y+2.02+i*0.30;
       sl.addShape(pres.ShapeType.roundRect,{x:8.88,y:ly+0.08,w:0.13,h:0.13,fill:{color:st.c},line:{color:st.c,width:0},rectRadius:0.02});
       sl.addText(st.l,{x:9.05,y:ly,w:2.0,h:0.28,fontSize:8.5,color:"333333",fontFace:"Calibri",valign:"middle"});
       const pct=Math.round((st.v/total)*100);
@@ -697,7 +697,7 @@ async function exportExecutivo(){
     sl.addText("SEM PARAR Corpay  ·  Soluções & Inovação  ·  Portfólio RH 2026  ·  Confidencial",{x:0.3,y:7.30,w:9.8,h:0.20,fontSize:7,color:"AA8899",fontFace:"Calibri",valign:"middle"});
     sl.addText("Gerado em "+fmtDate(hoje),{x:10.5,y:7.30,w:2.7,h:0.20,fontSize:7,color:C.rosa,align:"right",fontFace:"Calibri",valign:"middle"});
 
-    const mes=hoje.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace(' ','_').replace('.','');
+    const mes=hoje.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace(/[\s.]/g,'_').replace(/__/g,'_');
     await pres.writeFile({fileName:"portfolio_rh_executivo_"+mes+".pptx"});
     toast('✅ Exportação concluída!');
   }catch(err){
