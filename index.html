@@ -1423,7 +1423,7 @@ function renderProjetos(){
 function renderTable(rows,groupByArea){
   rows=applySortP(rows);
   const tbody=document.getElementById('tbp');
-  if(!rows.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><strong>Nenhum resultado</strong>Ajuste os filtros ou adicione um projeto.</div></td></tr>`;return;}
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><strong>Nenhum resultado</strong>Ajuste os filtros ou adicione um projeto.</div></td></tr>`;return;}
   let lastArea=null;
   tbody.innerHTML=rows.map(p=>{
     let aH='';
@@ -1434,8 +1434,9 @@ function renderTable(rows,groupByArea){
       <td style="font-weight:500;max-width:220px">${p.nome}</td>
       <td>${tipoBadge(p)}</td>
       <td style="color:var(--text2);font-size:11px">${p.area}</td>
-      <td style="text-align:center">${isB?'':`<span title="${farolPrazo(p).label}" style="color:${farolPrazo(p).cor};font-size:16px;line-height:1">●</span>`}</td>
-      <td style="font-size:11px"><span class="dot ${p.status==='Em andamento'?'don':isB?'dbasic':'doff'}"></span>${p.status}</td>
+      <td style="font-size:11px">
+        ${isB?'':`<span title="${farolPrazo(p).label}" style="color:${farolPrazo(p).cor};font-size:12px;margin-right:4px;">●</span>`}<span class="dot ${p.status==='Em andamento'?'don':isB?'dbasic':'doff'}"></span>${p.status}
+      </td>
       <td style="color:var(--text2);font-size:11px">${p.end}</td>
       <td>${qBadge(p.q)}</td>
       <td>${isB?'<span class="badge b-b">BASIC</span>':'<span style="font-size:10px;color:var(--text3)">Priorizado</span>'}</td>
@@ -2153,6 +2154,12 @@ function showPreview(id, isBasic, event){
   }
   content += `<div class="preview-row"><div class="preview-label">Descrição</div><div class="preview-val">${esc(desc||'Não preenchida')}</div></div>`;
   content += `<div class="preview-row"><div class="preview-label">Benefício esperado</div><div class="preview-val">${esc(benef||'Não preenchido')}</div></div>`;
+  if(!isBasic){
+    const f=farolPrazo(p);
+    content += `<div class="preview-row"><div class="preview-label">Farol</div><div class="preview-val"><span style="color:${f.cor};font-weight:600;">${f.icon} ${f.label}</span></div></div>`;
+    if(p.inicio) content += `<div class="preview-row"><div class="preview-label">Início</div><div class="preview-val">${esc(p.inicio)}</div></div>`;
+    if(p.historico) content += `<div class="preview-row"><div class="preview-label">Histórico</div><div class="preview-val" style="white-space:pre-wrap;">${esc(p.historico)}</div></div>`;
+  }
   pop.innerHTML = content;
   pop.style.display = 'block';
   positionPopup(pop, event);
