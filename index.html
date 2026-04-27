@@ -272,7 +272,485 @@ tr:hover td{background:#fdf5f8;}
   <button class="ntab" onclick="showTab('visao',this)">Capacidade & Demanda</button>
   <button class="ntab" onclick="showTab('basico',this)">Pipeline BASIC</button>
   <button class="ntab" onclick="showTab('priorizacao',this)">Priorização</button>
-  <button class="ntab" onclick="showTab('saude',this)">🩺 Saúde</button>
+</nav>
+<main id="main-content">
+<div class="metrics" id="metrics"></div>
+
+<!-- PROJETOS -->
+<div class="sec active" id="tab-projetos">
+  <div class="toolbar">
+    <div class="sw">
+      <svg class="si" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+      <input type="text" id="sp" placeholder="Buscar projeto..." oninput="acSearch('sp','acp')" autocomplete="off" onfocus="acSearch('sp','acp')">
+      <div class="acl" id="acp"></div>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Quarter</span>
+    <div id="fq-btns" style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button class="fbtn" data-fq="Q1" onclick="toggleF('q','Q1',this)">Q1</button>
+      <button class="fbtn" data-fq="Q2" onclick="toggleF('q','Q2',this)">Q2</button>
+      <button class="fbtn" data-fq="Q3" onclick="toggleF('q','Q3',this)">Q3</button>
+      <button class="fbtn" data-fq="Q4" onclick="toggleF('q','Q4',this)">Q4</button>
+      <button class="fbtn" data-fq="TBD" onclick="toggleF('q','TBD',this)">Não def.</button>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Área</span>
+    <div class="mdd-wrap">
+      <button class="fbtn mdd-btn" id="mdd-btn-p" onclick="openMDD('p')">Todas ▾</button>
+      <div class="mdd" id="mdd-p">
+        <div class="mdd-hdr"><span>Selecionar áreas</span><button onclick="clearAreaSet('p');event.stopPropagation()">Limpar</button></div>
+        <div class="mdd-list"></div>
+      </div>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Tipo</span>
+    <div style="display:flex;gap:4px;">
+      <button class="fbtn" data-ft="Estruturante" onclick="toggleF('t','Estruturante',this)">Estruturante</button>
+      <button class="fbtn" data-ft="Melhoria" onclick="toggleF('t','Melhoria',this)">Melhoria</button>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Origem</span>
+    <div style="display:flex;gap:4px;">
+      <button class="fbtn" data-fo="priorizado" onclick="toggleF('o','priorizado',this)">Priorizados</button>
+      <button class="fbtn" data-fo="basic" onclick="toggleF('o','basic',this)">BASIC</button>
+    </div>
+    <div class="tsep"></div>
+    <button class="fbtn clr" onclick="clearFilters()">✕ Limpar</button>
+    <div class="tsep"></div>
+    <button class="abtn" onclick="openModal()">+ Novo</button>
+    <div style="position:relative;display:inline-block;"><button onclick="document.getElementById('emenu').style.display=document.getElementById('emenu').style.display==='block'?'none':'block'" style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo);border:1px solid var(--bordo);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↓ Exportar ▾</button>
+    <div id="emenu" style="display:none;position:absolute;background:#fff;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;min-width:195px;overflow:hidden;margin-top:4px;">
+      <button onclick="exportCSV();document.getElementById('emenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;border-bottom:1px solid #f0f0f0;cursor:pointer;text-align:left;color:#333;">📄 Lista de projetos (CSV)</button>
+      <button id="btn-exec" onclick="exportExecutivo();document.getElementById('emenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;cursor:pointer;text-align:left;color:#333;">📊 Visão executiva (PPTX)</button>
+    </div></div>
+    <button onclick="downloadTemplate('priorizado')" style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--cinza);border:1px solid var(--cinza);border-radius:var(--r);cursor:pointer;white-space:nowrap;" title="Baixar modelo para importação">📋 Template</button>
+    <label style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo-luz);border:1px solid var(--bordo-luz);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↑ Importar<input type="file" accept=".csv" style="display:none" onchange="importCSV(event)"></label>
+  </div>
+  <div class="twrap">
+    <table>
+      <thead><tr>
+        <th class="th-sort" data-sort-table="p" data-sort-col="id" onclick="sortTable('p','id')" style="width:28px">#</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="nome" onclick="sortTable('p','nome')">Iniciativa</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="tipo" onclick="sortTable('p','tipo')">Tipo</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="area" onclick="sortTable('p','area')">Área</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="status" onclick="sortTable('p','status')">Status</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="end" onclick="sortTable('p','end')">Previsão</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="q" onclick="sortTable('p','q')">Quarter</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="origem" onclick="sortTable('p','origem')">Origem</th>
+        <th style="width:78px"></th>
+      </tr></thead>
+      <tbody id="tbp"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- QUARTERS -->
+<div class="sec" id="tab-quarters">
+  <div class="toolbar">
+    <div class="sw" style="max-width:220px">
+      <svg class="si" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+      <input type="text" id="sk" placeholder="Buscar no kanban..." oninput="acSearch('sk','ack')" autocomplete="off" onfocus="acSearch('sk','ack')">
+      <div class="acl" id="ack"></div>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Área</span>
+    <div class="mdd-wrap">
+      <button class="fbtn mdd-btn" id="mdd-btn-k" onclick="openMDD('k')">Todas ▾</button>
+      <div class="mdd" id="mdd-k">
+        <div class="mdd-hdr"><span>Selecionar áreas</span><button onclick="clearAreaSet('k');event.stopPropagation()">Limpar</button></div>
+        <div class="mdd-list"></div>
+      </div>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Tipo</span>
+    <div style="display:flex;gap:4px;">
+      <button class="fbtn" data-kt="Estruturante" onclick="toggleKF('t','Estruturante',this)">Estruturante</button>
+      <button class="fbtn" data-kt="Melhoria" onclick="toggleKF('t','Melhoria',this)">Melhoria</button>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Origem</span>
+    <div style="display:flex;gap:4px;">
+      <button class="fbtn" data-ko="priorizado" onclick="toggleKF('o','priorizado',this)">Priorizados</button>
+      <button class="fbtn" data-ko="basic" onclick="toggleKF('o','basic',this)">BASIC</button>
+    </div>
+    <div class="tsep"></div>
+    <button class="fbtn clr" onclick="clearKFilters()">✕ Limpar</button>
+  </div>
+  <div class="kwrap"><div class="kanban" id="kanban"></div></div>
+</div>
+
+<!-- CAPACIDADE & DEMANDA -->
+<div class="sec" id="tab-visao">
+  <div class="toolbar">
+    <span class="flbl">Quarter</span>
+    <div id="vq-btns" style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button class="fbtn" data-vq="Q1" onclick="toggleVF('q','Q1',this)">Q1</button>
+      <button class="fbtn" data-vq="Q2" onclick="toggleVF('q','Q2',this)">Q2</button>
+      <button class="fbtn" data-vq="Q3" onclick="toggleVF('q','Q3',this)">Q3</button>
+      <button class="fbtn" data-vq="Q4" onclick="toggleVF('q','Q4',this)">Q4</button>
+      <button class="fbtn" data-vq="TBD" onclick="toggleVF('q','TBD',this)">Não def.</button>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Área</span>
+    <div class="mdd-wrap">
+      <button class="fbtn mdd-btn" id="mdd-btn-v" onclick="openMDD('v')">Todas ▾</button>
+      <div class="mdd" id="mdd-v">
+        <div class="mdd-hdr"><span>Selecionar áreas</span><button onclick="clearAreaSet('v');event.stopPropagation()">Limpar</button></div>
+        <div class="mdd-list"></div>
+      </div>
+    </div>
+    <div class="tsep"></div>
+    <button class="fbtn clr" onclick="clearVFilters()">✕ Limpar</button>
+  </div>
+  <div class="cg">
+    <div class="cc"><h3>Projetos por quarter</h3><div id="ch-q"></div></div>
+    <div class="cc"><h3>Projetos por tipo</h3><div id="ch-t"></div></div>
+  </div>
+  <div class="cc full">
+    <h3>Volume por área · distribuição por quarter (priorizados + BASIC)</h3>
+    <div class="legrow">
+      <span class="leg"><span class="lsw" style="background:#2E101E"></span>Q1</span>
+      <span class="leg"><span class="lsw" style="background:#662046"></span>Q2</span>
+      <span class="leg"><span class="lsw" style="background:#BF144A"></span>Q3</span>
+      <span class="leg"><span class="lsw" style="background:#FF7DAF"></span>Q4</span>
+      <span class="leg"><span class="lsw" style="background:#D9D9D9"></span>Não definido</span>
+    </div>
+    <div id="ch-area"></div>
+  </div>
+</div>
+
+<!-- BASIC -->
+<div class="sec" id="tab-basico">
+  <div class="toolbar">
+    <div class="sw">
+      <svg class="si" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+      <input type="text" id="sb" placeholder="Buscar iniciativa BASIC..." oninput="acSearch('sb','acb',true)" autocomplete="off" onfocus="acSearch('sb','acb',true)">
+      <div class="acl" id="acb"></div>
+    </div>
+    <div class="tsep"></div>
+    <span class="flbl">Área</span>
+    <div class="mdd-wrap">
+      <button class="fbtn mdd-btn" id="mdd-btn-b" onclick="openMDD('b')">Todas ▾</button>
+      <div class="mdd" id="mdd-b">
+        <div class="mdd-hdr"><span>Selecionar áreas</span><button onclick="clearAreaSet('b');event.stopPropagation()">Limpar</button></div>
+        <div class="mdd-list"></div>
+      </div>
+    </div>
+    <div class="tsep"></div>
+    <button class="fbtn clr" onclick="clearBasicFilters()">✕ Limpar</button>
+    <div class="tsep"></div>
+    <button class="abtn" onclick="openModalBasic()">+ Nova iniciativa</button>
+  </div>
+  <div class="twrap">
+    <table>
+      <thead><tr>
+        <th class="th-sort" data-sort-table="b" data-sort-col="nome" onclick="sortTable('b','nome')">Iniciativa</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="area" onclick="sortTable('b','area')">Área</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="prio" onclick="sortTable('b','prio')">Prioridade</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="biz" onclick="sortTable('b','biz')">Score Negócio</th>
+        <th class="th-sort" data-sort-table="b" data-sort-col="ti" onclick="sortTable('b','ti')">Score TI</th>
+        <th>Score Total</th><th>Quadrante</th>
+        <th style="width:78px"></th>
+      </tr></thead>
+      <tbody id="tbb"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PRIORIZAÇÃO -->
+<div class="sec" id="tab-priorizacao">
+  <div class="pctrl">
+    <div class="ctrl"><span>Peso Negócio</span><input type="range" id="wB" min="0" max="100" value="50" step="1" oninput="syncW('b')"><span class="cv" id="wBv">50%</span></div>
+    <div class="ctrl"><span>Peso TI</span><input type="range" id="wT" min="0" max="100" value="50" step="1" oninput="syncW('t')"><span class="cv" id="wTv">50%</span></div>
+  </div>
+  <div class="pg">
+    <div class="cc"><h3>Ranking · Priorizar → Planejar → Avaliar → Diferir</h3><div id="prank"></div></div>
+    <div class="cc">
+      <h3>Matriz valor negócio × complexidade TI</h3>
+      <div class="legrow">
+        <span class="leg"><span class="lsw" style="background:#1D9E75;border-radius:50%"></span>Priorizar</span>
+        <span class="leg"><span class="lsw" style="background:var(--bordo);border-radius:50%"></span>Planejar</span>
+        <span class="leg"><span class="lsw" style="background:var(--magenta);border-radius:50%"></span>Avaliar</span>
+        <span class="leg"><span class="lsw" style="background:var(--cinza);border-radius:50%"></span>Diferir</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="scatter" role="img" aria-label="Matriz priorização">Matriz.</canvas></div>
+    </div>
+  </div>
+</div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Portfólio RH · 2026 · v11</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bordo:#2E101E;--bordo-luz:#662046;--rosa:#FF7DAF;--magenta:#BF144A;
+  --cinza:#9E9E9E;--offwhite:#F7F7F7;--branco:#fff;
+  --bg:var(--offwhite);--surface:var(--branco);--text:#000;--text2:#3a3a3a;--text3:#777;
+  --border:rgba(0,0,0,.09);--border2:rgba(0,0,0,.16);
+  --r:8px;--rl:14px;--font:'Fira Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;}
+/* ── HEADER ── */
+header{background:var(--bordo);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:200;border-bottom:3px solid var(--rosa);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:30px;height:30px;background:var(--rosa);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:var(--bordo);flex-shrink:0;}
+.logo-text{font-size:13px;font-weight:500;color:var(--branco);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.4);margin-left:4px;}
+.hright{font-size:11px;color:rgba(255,255,255,.4);white-space:nowrap;margin-left:12px;flex-shrink:0;}
+/* ── NAV ── */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 8px;display:flex;position:sticky;top:54px;z-index:199;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+nav::-webkit-scrollbar{display:none;}
+.ntab{padding:12px 14px;font-size:12px;font-weight:500;color:var(--text3);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-family:var(--font);}
+.ntab:hover{color:var(--bordo-luz);}
+.ntab.active{color:var(--bordo);border-bottom-color:var(--rosa);}
+/* ── MAIN ── */
+main{max-width:1380px;margin:0 auto;padding:16px 14px 80px;}
+.sec{display:none;}.sec.active{display:block;}
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+@media(max-width:640px){.metrics{grid-template-columns:repeat(2,1fr);}}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;border-top:3px solid var(--bordo);cursor:pointer;transition:box-shadow .15s,transform .1s;position:relative;}
+.metric:hover{box-shadow:0 4px 16px rgba(46,16,30,.12);transform:translateY(-1px);}
+.metric.af{border-top-color:var(--rosa);box-shadow:0 0 0 2px var(--rosa);}
+.metric .val{font-size:26px;font-weight:300;color:var(--bordo);letter-spacing:-.5px;}
+.metric .lbl{font-size:11px;font-weight:500;color:var(--text2);margin-top:3px;}
+.metric .sub{font-size:10px;color:var(--text3);margin-top:2px;}
+.metric .hint{position:absolute;top:8px;right:10px;font-size:10px;color:var(--text3);}
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:10px 12px;}
+.tsep{width:1px;height:20px;background:var(--border2);margin:0 2px;flex-shrink:0;}
+@media(max-width:640px){.tsep{display:none;}.toolbar{gap:6px;}}
+.flbl{font-size:11px;font-weight:500;color:var(--text3);white-space:nowrap;}
+/* ── SEARCH ── */
+.sw{position:relative;flex:1;min-width:160px;}
+.sw input{width:100%;padding:7px 12px 7px 28px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;}
+.sw input:focus{border-color:var(--bordo-luz);background:var(--branco);}
+.si{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--text3);}
+.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:300;background:var(--branco);border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;display:none;}
+.acl.open{display:block;}
+.aci{padding:9px 12px;font-size:12px;cursor:pointer;color:var(--text);border-bottom:1px solid var(--border);}
+.aci:last-child{border-bottom:none;}
+.aci:hover,.aci:active{background:#fdf5f8;}
+.aci mark{background:none;color:var(--magenta);font-weight:600;}
+/* ── FILTER BUTTONS ── */
+.fbtn{padding:5px 11px;font-size:12px;font-family:var(--font);border-radius:100px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent;}
+.fbtn:hover,.fbtn:active{border-color:var(--bordo-luz);color:var(--bordo-luz);}
+.fbtn.sel{background:var(--bordo);color:var(--branco);border-color:var(--bordo);}
+.fbtn.clr{color:var(--magenta);border-color:var(--magenta);}
+.fbtn.clr:hover,.fbtn.clr:active{background:var(--magenta);color:var(--branco);}
+.isel{padding:5px 10px;font-size:12px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;cursor:pointer;max-width:150px;}
+.abtn{padding:8px 14px;font-size:12px;font-weight:500;font-family:var(--font);background:var(--rosa);color:var(--bordo);border:none;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:background .15s;-webkit-tap-highlight-color:transparent;}
+.abtn:hover,.abtn:active{background:var(--magenta);color:var(--branco);}
+/* ── TABLE ── */
+.twrap{overflow-x:auto;border-radius:var(--rl);border:1px solid var(--border);-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:12px;background:var(--surface);min-width:700px;}
+th{text-align:left;padding:9px 12px;font-weight:500;font-size:10px;color:var(--branco);background:var(--bordo);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fdf5f8;}
+.rb td{background:#f8f5fc!important;}
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:100px;font-size:10px;font-weight:500;white-space:nowrap;}
+.b-e{background:#f0e8f4;color:#5c1a6e;}
+.b-m{background:#e8eff8;color:#1a3a6e;}
+.b-b{background:#fdf0f5;color:var(--bordo-luz);border:1px dashed var(--rosa);}
+.b-q1{background:#f0e8f4;color:#2E101E;}
+.b-q2{background:#f0e8f4;color:#662046;}
+.b-q3{background:#ffe8f0;color:var(--magenta);}
+.b-q4{background:#ffe0ec;color:#8a003a;}
+.b-tbd{background:var(--bg);color:var(--text3);}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;}
+.don{background:#1D9E75;}.doff{background:var(--cinza);}.dbasic{background:#181818;}
+/* ── ROW ACTIONS ── */
+.ract{display:flex;gap:5px;}
+.ibtn{width:28px;height:28px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;transition:all .12s;font-family:var(--font);-webkit-tap-highlight-color:transparent;}
+.ibtn:hover,.ibtn:active{background:var(--bg);color:var(--bordo);border-color:var(--bordo);}
+.ibtn.d:hover,.ibtn.d:active{background:#fff0f0;color:#b00;border-color:#b00;}
+/* ── KANBAN ── */
+.kwrap{padding-bottom:8px;}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+@media(max-width:640px){.kanban{grid-template-columns:1fr;}}
+@media(min-width:641px) and (max-width:900px){.kanban{grid-template-columns:repeat(2,1fr);}}
+.kcol{background:var(--bg);border-radius:var(--rl);padding:10px;border:1px solid var(--border);min-height:180px;}
+.kch{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:3px solid;}
+.kq1{border-bottom-color:#2E101E!important;}
+.kq2{border-bottom-color:#662046!important;}
+.kq3{border-bottom-color:#BF144A!important;}
+.kq4{border-bottom-color:#FF7DAF!important;}
+.ktbd{border-bottom-color:#D9D9D9!important;}
+.kcol h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.kcount{font-size:11px;color:var(--text3);}
+.kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 10px;margin-bottom:6px;cursor:grab;user-select:none;transition:box-shadow .15s,opacity .15s;-webkit-tap-highlight-color:transparent;}
+.kcard:active{cursor:grabbing;opacity:.7;}
+.kcard.dragging{opacity:.35;}
+.kcard .kt{font-size:11px;font-weight:500;margin-bottom:4px;line-height:1.3;}
+.kcard .km{font-size:10px;color:var(--text3);display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
+.kdz{min-height:40px;border:2px dashed transparent;border-radius:var(--r);transition:all .15s;padding:2px;}
+.kdz.da{border-color:var(--rosa);background:#fff5f8;}
+/* touch drag for kanban */
+.kcard.touch-drag{position:fixed;z-index:500;pointer-events:none;opacity:.85;box-shadow:0 8px 24px rgba(0,0,0,.2);}
+/* ── CHARTS ── */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:640px){.cg{grid-template-columns:1fr;}}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 20px;}
+.cc.full{grid-column:1/-1;}
+.cc h3{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;}
+.legrow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.leg{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);}
+.lsw{width:11px;height:11px;border-radius:2px;flex-shrink:0;}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.slbl{font-size:11px;color:var(--text2);min-width:155px;text-align:right;}
+@media(max-width:640px){.slbl{min-width:100px;font-size:10px;}}
+.strk{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex;}
+.sseg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--branco);min-width:0;overflow:hidden;}
+.stot{font-size:11px;font-weight:500;color:var(--text3);min-width:16px;}
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.blbl{font-size:11px;color:var(--text2);min-width:140px;text-align:right;}
+.btrk{flex:1;height:18px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.bfill{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;}
+.bfill span{font-size:10px;font-weight:600;color:var(--branco);}
+/* ── PRIO ── */
+.pctrl{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 16px;margin-bottom:12px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+.ctrl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.ctrl input[type=range]{width:90px;accent-color:var(--bordo);}
+.cv{font-size:13px;font-weight:500;color:var(--bordo);min-width:30px;}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:640px){.pg{grid-template-columns:1fr;}}
+.rr{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);}
+.rr:last-child{border-bottom:none;}
+.rn{font-size:11px;font-weight:600;color:var(--text3);width:18px;text-align:right;}
+.rname{font-size:11px;flex:1;line-height:1.3;}
+.rs{font-size:12px;font-weight:500;min-width:26px;text-align:right;color:var(--bordo);}
+.qb{display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:500;white-space:nowrap;}
+.qq{background:#e8f4f0;color:#0f5c3a;}
+.qp{background:#f0e8f4;color:var(--bordo);}
+.qa{background:#fff3e0;color:#7a4e00;}
+.qd{background:var(--bg);color:var(--text3);}
+/* ── SCORE PILLS ── */
+.sp-biz{background:#f0e8f4;color:var(--bordo);display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:600;}
+.sp-ti{background:#e8eff8;color:#1a3a6e;display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:600;}
+.sp-tot{background:var(--bordo);color:var(--branco);display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:600;}
+/* ── MODAL ── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:flex-start;justify-content:center;padding:20px 14px 40px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.moverlay.open{display:flex;}
+.modal{background:var(--branco);border-radius:var(--rl);padding:22px 22px 20px;width:100%;max-width:620px;border-top:4px solid var(--rosa);position:relative;}
+.modal h2{font-size:16px;font-weight:500;color:var(--bordo);margin-bottom:4px;}
+.msub{font-size:12px;color:var(--text3);margin-bottom:14px;}
+.mclose{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:transparent;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--text3);}
+.mclose:hover{background:var(--bg);}
+/* form type toggle */
+.ftype{display:flex;gap:0;margin-bottom:16px;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;}
+.ftype-btn{flex:1;padding:9px 8px;font-size:12px;font-weight:500;font-family:var(--font);border:none;background:transparent;cursor:pointer;color:var(--text2);transition:all .15s;border-right:1px solid var(--border2);line-height:1.3;text-align:center;}
+.ftype-btn:last-child{border-right:none;}
+.ftype-btn.active{background:var(--bordo);color:var(--branco);}
+/* form grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:480px){.fg{grid-template-columns:1fr;}}
+.fi{display:flex;flex-direction:column;gap:4px;}
+.fi.full{grid-column:1/-1;}
+.fi label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:4px;}
+.req{color:var(--magenta);}
+.fi input,.fi select,.fi textarea{padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:var(--font);color:var(--text);background:var(--bg);outline:none;-webkit-appearance:none;}
+.fi textarea{resize:vertical;min-height:60px;}
+.fi input:focus,.fi select:focus,.fi textarea:focus{border-color:var(--bordo-luz);background:var(--branco);}
+.fi input.err,.fi select.err,.fi textarea.err{border-color:var(--magenta);}
+.fi input:disabled,.fi select:disabled,.fi textarea:disabled{opacity:.55;cursor:not-allowed;background:var(--bg);}
+/* AI assist button */
+.ai-wrap{position:relative;}
+.ai-wrap textarea{padding-right:36px;}
+.ai-btn{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:6px;border:none;background:var(--rosa);color:var(--bordo);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.ai-btn:hover{background:var(--magenta);color:var(--branco);}
+.ai-btn.loading{animation:pulse .8s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.ai-suggestion{background:#fdf5f8;border:1px solid var(--rosa);border-radius:var(--r);padding:10px 12px;margin-top:6px;font-size:12px;color:var(--text2);display:none;line-height:1.5;}
+.ai-suggestion.show{display:block;}
+.ai-actions{display:flex;gap:6px;margin-top:6px;}
+.ai-use{padding:5px 12px;font-size:11px;font-weight:500;font-family:var(--font);background:var(--bordo);color:var(--branco);border:none;border-radius:var(--r);cursor:pointer;}
+.ai-disc{padding:5px 12px;font-size:11px;font-family:var(--font);background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;}
+/* score grid */
+.fsec{grid-column:1/-1;font-size:11px;font-weight:600;color:var(--bordo);text-transform:uppercase;letter-spacing:.06em;padding-top:8px;border-top:1px solid var(--border);margin-top:2px;}
+.fsec-note{grid-column:1/-1;font-size:11px;color:var(--text3);background:var(--bg);border-radius:var(--r);padding:8px 10px;border-left:3px solid var(--cinza);}
+.score-grid{border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-top:2px;}
+.score-row{display:grid;grid-template-columns:1fr auto;}
+.sc-label{padding:8px 10px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);background:var(--bg);}
+.score-row:last-child .sc-label{border-bottom:none;}
+.sc-sel{padding:7px 8px;font-size:12px;font-family:var(--font);border:none;border-left:1px solid var(--border2);border-bottom:1px solid var(--border);background:var(--branco);outline:none;color:var(--text);min-width:70px;}
+.score-row:last-child .sc-sel{border-bottom:none;}
+.peso-badge{display:inline-block;font-size:10px;color:var(--text3);margin-left:4px;}
+.fact{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;}
+.bcancel{padding:8px 16px;font-size:13px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--r);background:transparent;cursor:pointer;color:var(--text2);}
+.bsave{padding:8px 16px;font-size:13px;font-weight:500;font-family:var(--font);background:var(--bordo);color:var(--branco);border:none;border-radius:var(--r);cursor:pointer;}
+.bdel{padding:8px 16px;font-size:13px;font-weight:500;font-family:var(--font);background:transparent;color:#b00;border:1px solid #b00;border-radius:var(--r);cursor:pointer;margin-right:auto;}
+.bsave:hover{background:#181818;}
+/* ── CONFIRM DIALOG ── */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center;padding:20px;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:var(--branco);border-radius:var(--rl);padding:24px;width:100%;max-width:360px;border-top:4px solid var(--magenta);text-align:center;}
+.confirm-box h3{font-size:16px;font-weight:500;color:var(--bordo);margin-bottom:8px;}
+.confirm-box p{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;}
+.confirm-actions{display:flex;gap:10px;justify-content:center;}
+.conf-yes{padding:9px 20px;font-size:13px;font-weight:500;font-family:var(--font);background:var(--magenta);color:var(--branco);border:none;border-radius:var(--r);cursor:pointer;}
+.conf-no{padding:9px 20px;font-size:13px;font-family:var(--font);background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;}
+/* ── TOAST ── */
+.toast{position:fixed;bottom:18px;right:14px;z-index:700;background:var(--bordo);color:var(--branco);padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:500;transform:translateY(60px);opacity:0;transition:all .25s;border-left:4px solid var(--rosa);max-width:calc(100vw - 28px);}
+.toast.show{transform:translateY(0);opacity:1;}
+.empty{text-align:center;padding:32px;color:var(--text3);font-size:13px;}
+.empty strong{display:block;font-size:14px;margin-bottom:4px;color:var(--text2);}
+
+.mdd-wrap{position:relative;display:inline-block;}
+.mdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:300;background:var(--branco);border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.14);min-width:210px;max-height:230px;overflow-y:auto;}
+.mdd.open{display:block;}
+.mdd-hdr{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--branco);}
+.mdd-hdr span{font-size:11px;font-weight:500;color:var(--text3);}
+.mdd-hdr button{font-size:10px;color:var(--magenta);background:none;border:none;cursor:pointer;padding:0;}
+.mdd-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);}
+.mdd-item:last-child{border-bottom:none;}
+.mdd-item:hover{background:#fdf5f8;}
+.mdd-item input[type=checkbox]{accent-color:var(--bordo);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+.mdd-btn{min-width:80px;text-align:left;}
+.mdd-btn.sel{background:var(--bordo);color:var(--branco);border-color:var(--bordo);}
+
+/* preview popup */
+.preview-popup{position:fixed;z-index:250;background:var(--branco);border:1px solid var(--border2);border-radius:var(--rl);padding:16px 18px;width:340px;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.15);pointer-events:none;border-top:3px solid var(--rosa);}
+.preview-popup h4{font-size:13px;font-weight:500;color:var(--bordo);margin-bottom:8px;line-height:1.3;}
+.preview-row{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;}
+.preview-row:last-child{margin-bottom:0;}
+.preview-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
+.preview-val{font-size:12px;color:var(--text2);line-height:1.4;}
+
+.th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:background .15s;}
+.th-sort:hover{background:#662046;color:#fff;}
+.th-sort::after{content:" ⇅";opacity:.5;font-size:10px;}
+.th-sort.asc{background:#662046;}
+.th-sort.asc::after{content:" ↑";opacity:1;color:#fff;}
+.th-sort.desc{background:#662046;}
+.th-sort.desc::after{content:" ↓";opacity:1;color:#fff;}
+
+#tbs th { position:sticky; top:0; z-index:1; }
+#tbs td { vertical-align:top; }
+#tbs tr:hover { background:#f5f0f8 !important; }
+
+</style>
+  </head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">RH</div>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v11</span></span>
+  </div>
+  <span class="hright" id="last-update"></span>
+</header>
+<nav id="main-nav">
+  <button class="ntab active" onclick="showTab('projetos',this)">Projetos</button>
+  <button class="ntab" onclick="showTab('quarters',this)">Por Quarter</button>
+  <button class="ntab" onclick="showTab('visao',this)">Capacidade & Demanda</button>
+  <button class="ntab" onclick="showTab('basico',this)">Pipeline BASIC</button>
+  <button class="ntab" onclick="showTab('priorizacao',this)">Priorização</button>
 </nav>
 <main id="main-content">
 <div class="metrics" id="metrics"></div>
@@ -945,7 +1423,7 @@ function renderProjetos(){
 function renderTable(rows,groupByArea){
   rows=applySortP(rows);
   const tbody=document.getElementById('tbp');
-  if(!rows.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><strong>Nenhum resultado</strong>Ajuste os filtros ou adicione um projeto.</div></td></tr>`;return;}
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><strong>Nenhum resultado</strong>Ajuste os filtros ou adicione um projeto.</div></td></tr>`;return;}
   let lastArea=null;
   tbody.innerHTML=rows.map(p=>{
     let aH='';
@@ -956,6 +1434,7 @@ function renderTable(rows,groupByArea){
       <td style="font-weight:500;max-width:220px">${p.nome}</td>
       <td>${tipoBadge(p)}</td>
       <td style="color:var(--text2);font-size:11px">${p.area}</td>
+      <td style="text-align:center">${isB?'':`<span title="${farolPrazo(p).label}" style="color:${farolPrazo(p).cor};font-size:16px;line-height:1">●</span>`}</td>
       <td style="font-size:11px"><span class="dot ${p.status==='Em andamento'?'don':isB?'dbasic':'doff'}"></span>${p.status}</td>
       <td style="color:var(--text2);font-size:11px">${p.end}</td>
       <td>${qBadge(p.q)}</td>
@@ -1529,7 +2008,6 @@ function showTab(id,btn){
     buildAreaChecks('barea-checks',areaSets.b,allBasicAreas(),"'barea-checks'");
     renderBasic();
   }
-  if(id==='saude') renderSaude();
   if(id==='quarters')renderKanban();
 }
 
@@ -1955,7 +2433,6 @@ async function importCSV(event){
 }
 
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  if(document.getElementById('tab-saude')?.classList.contains('active')) renderSaude();
 }
 loadAllData();
 
