@@ -251,6 +251,11 @@ tr:hover td{background:#fdf5f8;}
 .th-sort.asc::after{content:" ↑";opacity:1;color:#fff;}
 .th-sort.desc{background:#662046;}
 .th-sort.desc::after{content:" ↓";opacity:1;color:#fff;}
+
+#tbs th { position:sticky; top:0; z-index:1; }
+#tbs td { vertical-align:top; }
+#tbs tr:hover { background:#f5f0f8 !important; }
+
 </style>
   </head>
 <body>
@@ -267,6 +272,7 @@ tr:hover td{background:#fdf5f8;}
   <button class="ntab" onclick="showTab('visao',this)">Capacidade & Demanda</button>
   <button class="ntab" onclick="showTab('basico',this)">Pipeline BASIC</button>
   <button class="ntab" onclick="showTab('priorizacao',this)">Priorização</button>
+  <button class="ntab" onclick="showTab('saude',this)">🩺 Saúde</button>
 </nav>
 <main id="main-content">
 <div class="metrics" id="metrics"></div>
@@ -472,6 +478,47 @@ tr:hover td{background:#fdf5f8;}
     </div>
   </div>
 </div>
+
+<!-- ABA SAÚDE DO PORTFÓLIO -->
+<div class="sec" id="tab-saude">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="saude-filtro-status" onchange="renderSaude()" style="padding:5px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
+        <option value="">Todos os status</option>
+        <option value="Em andamento">Em andamento</option>
+        <option value="Não iniciado">Não iniciado</option>
+        <option value="Concluído">Concluído</option>
+      </select>
+      <select id="saude-filtro-farol" onchange="renderSaude()" style="padding:5px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
+        <option value="">Todos os farois</option>
+        <option value="Atrasado">🔴 Atrasado</option>
+        <option value="Atenção">🟡 Atenção (≤30d)</option>
+        <option value="No prazo">🟢 No prazo</option>
+        <option value="Concluído">✅ Concluído</option>
+        <option value="Sem prazo">⚪ Sem prazo</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:16px;font-size:11px;color:#666;" id="saude-alertas"></div>
+  </div>
+  <div style="overflow-x:auto;">
+    <table id="tbs" style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:var(--bordo);color:#fff;">
+          <th style="padding:10px 12px;text-align:left;font-weight:600;width:28%;">Iniciativa / Projeto</th>
+          <th style="padding:10px 8px;text-align:left;font-weight:600;width:11%;">Categoria</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;width:7%;">Farol</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;width:9%;">Status</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;width:7%;">Início</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;width:7%;">Término</th>
+          <th style="padding:10px 8px;text-align:left;font-weight:600;">Histórico / Últimas atualizações</th>
+          <th style="padding:10px 8px;width:32px;"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-saude"></tbody>
+    </table>
+  </div>
+</div>
+
 </main>
 
 <!-- MODAL PROJETO -->
@@ -524,6 +571,87 @@ tr:hover td{background:#fdf5f8;}
 <div class="preview-popup" id="preview-popup" style="display:none"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+
+// ── FAROL DE PRAZO ────────────────────────────────────────
+function farolPrazo(p){
+  if(p.status==='Concluído') return {cor:'#1E7A4A', label:'Concluído', icon:'●'};
+  if(!p.end || p.end==='TBD') return {cor:'#9E9E9E', label:'Sem prazo', icon:'○'};
+  const meses={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
+  const m=p.end.match(/(\w+)\/(\d+)/);
+  if(!m) return {cor:'#9E9E9E', label:'Inválido', icon:'○'};
+  const dt=new Date(2000+parseInt(m[2]), meses[m[1].toLowerCase()]||0, 28);
+  const hoje=new Date();
+  const dias=Math.round((dt-hoje)/86400000);
+  if(dias < 0)  return {cor:'#BF144A', label:'Atrasado',  icon:'●'};
+  if(dias <=30) return {cor:'#C47D00', label:'Atenção',   icon:'●'};
+  return            {cor:'#1E7A4A', label:'No prazo',  icon:'●'};
+}
+
+// ── RENDER SAÚDE DO PORTFÓLIO ─────────────────────────────
+function renderSaude(){
+  const filtroStatus = document.getElementById('saude-filtro-status')?.value||'';
+  const filtroFarol  = document.getElementById('saude-filtro-farol')?.value||'';
+
+  const rows = projects.filter(p=>{
+    if(filtroStatus && p.status!==filtroStatus) return false;
+    if(filtroFarol){
+      const f=farolPrazo(p);
+      if(f.label!==filtroFarol) return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    // Sort: Atrasado → Atenção → Em andamento → Não iniciado → Concluído
+    const order={'Atrasado':0,'Atenção':1,'No prazo':2,'Sem prazo':3,'Concluído':4};
+    return (order[farolPrazo(a).label]||5)-(order[farolPrazo(b).label]||5);
+  });
+
+  // Alert counters
+  const atrasados = projects.filter(p=>farolPrazo(p).label==='Atrasado').length;
+  const atencao   = projects.filter(p=>farolPrazo(p).label==='Atenção').length;
+  const semQ      = projects.filter(p=>!p.q||p.q==='TBD').length;
+  const alertDiv  = document.getElementById('saude-alertas');
+  if(alertDiv){
+    alertDiv.innerHTML = [
+      atrasados>0 ? `<span style="color:#BF144A;font-weight:600;">● ${atrasados} atrasado${atrasados>1?'s':''}</span>` : '',
+      atencao>0   ? `<span style="color:#C47D00;font-weight:600;">● ${atencao} em atenção</span>` : '',
+      semQ>0      ? `<span style="color:#9E9E9E;">○ ${semQ} sem quarter</span>` : '',
+    ].filter(Boolean).join(' · ');
+  }
+
+  const tbody = document.getElementById('tbody-saude');
+  if(!tbody) return;
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="8" style="padding:32px;text-align:center;color:#aaa;">Nenhum projeto encontrado</td></tr>';
+    return;
+  }
+
+  const statusBg = s => s==='Em andamento'?'#E8F0F8':s==='Concluído'?'#E8F5EE':'#F5F5F5';
+  const statusC  = s => s==='Em andamento'?'#1A5C8A':s==='Concluído'?'#1E7A4A':'#666';
+
+  tbody.innerHTML = rows.map((p,i)=>{
+    const f = farolPrazo(p);
+    const bg = i%2===0?'#fff':'#faf8fc';
+    const hist = p.historico ? p.historico.replace(/\n/g,'<br>') : '<span style="color:#ccc;font-style:italic;">—</span>';
+    return `<tr style="background:${bg};border-bottom:1px solid #f0eef2;">
+      <td style="padding:10px 12px;font-weight:500;color:#1a1a1a;">${p.nome}</td>
+      <td style="padding:10px 8px;color:#666;">${p.tipo||'—'}</td>
+      <td style="padding:10px 8px;text-align:center;">
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;background:${f.cor}20;color:${f.cor};">
+          ${f.icon} ${f.label}
+        </span>
+      </td>
+      <td style="padding:10px 8px;text-align:center;">
+        <span style="display:inline-block;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;background:${statusBg(p.status)};color:${statusC(p.status)};">${p.status}</span>
+      </td>
+      <td style="padding:10px 8px;text-align:center;color:#666;">${p.inicio||'—'}</td>
+      <td style="padding:10px 8px;text-align:center;color:#666;">${p.end||'—'}</td>
+      <td style="padding:10px 12px;color:#333;line-height:1.5;">${hist}</td>
+      <td style="padding:10px 8px;text-align:center;">
+        <button onclick="openModal(${p.id})" title="Editar" style="background:none;border:none;cursor:pointer;font-size:14px;color:#9e9e9e;">✏️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
 
 
 function exportExecutivo(){
@@ -1090,6 +1218,7 @@ function buildFormFields(type,data){
     h+=`
     <div class="fi"><label>Tipo <span class="req">*</span></label><select id="f-tipo"><option>Projeto Estruturante</option><option>Melhoria contínua</option></select></div>
     <div class="fi"><label>Status <span class="req">*</span></label><select id="f-status"><option>Não iniciado</option><option>Em andamento</option><option>Concluído</option></select></div>
+    <div class="fi"><label>Início</label><input type="text" id="f-inicio" value="${esc(d.inicio||'')}" placeholder="ex: jan/26"></div>
     <div class="fi"><label>Término previsto <span class="req">*</span></label><input type="text" id="f-end" value="${esc(d.end||'')}" placeholder="ex: jun/26" oninput="autoFillQ()"></div>
     <div class="fi"><label>Quarter</label><select id="f-q"><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option><option value="TBD">Não definido</option></select></div>`;
   } else {
@@ -1400,6 +1529,7 @@ function showTab(id,btn){
     buildAreaChecks('barea-checks',areaSets.b,allBasicAreas(),"'barea-checks'");
     renderBasic();
   }
+  if(id==='saude') renderSaude();
   if(id==='quarters')renderKanban();
 }
 
@@ -1632,8 +1762,8 @@ async function loadAllData(){
       projects = pData.map(r=>({
         id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
         tipo:r.tipo||'Melhoria contínua', area:r.area||'', prio:r.prio||'Média',
-        status:r.status||'Não iniciado', end:r.termino||'', q:r.quarter||'TBD',
-        origem:r.origem||'priorizado'
+        status:r.status||'Não iniciado', inicio:r.inicio||'', end:r.termino||'', q:r.quarter||'TBD',
+        origem:r.origem||'priorizado', historico:r.historico||''
       }));
     } else {
       await seedInitialData();
@@ -1668,7 +1798,8 @@ async function seedInitialData(){
   if(data) projects = data.map(r=>({
     id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
     tipo:r.tipo, area:r.area, prio:r.prio,
-    status:r.status, end:r.termino||'', q:r.quarter||'TBD', origem:r.origem
+    status:r.status, inicio:r.inicio||'', end:r.termino||'', q:r.quarter||'TBD',
+    origem:r.origem, historico:r.historico||''
   }));
 }
 
@@ -1690,8 +1821,8 @@ async function saveProjetoToDB(data, id){
   const row = {
     nome:data.nome, descricao:data.desc, beneficio:data.benef,
     tipo:data.tipo, area:data.area, prio:data.prio,
-    status:data.status, termino:data.end, quarter:data.q,
-    origem:data.origem, updated_at:new Date().toISOString()
+    status:data.status, inicio:data.inicio||'', termino:data.end, quarter:data.q,
+    origem:data.origem, historico:data.historico||'', updated_at:new Date().toISOString()
   };
   if(id){
     await supa.from('projetos').update(row).eq('id',id);
@@ -1823,7 +1954,9 @@ async function importCSV(event){
   toast(`Importados: ${added} | Ignorados (duplicados): ${skipped}`);
 }
 
-function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});}
+function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  if(document.getElementById('tab-saude')?.classList.contains('active')) renderSaude();
+}
 loadAllData();
 
 document.addEventListener('click',function(e){const m=document.getElementById('emenu');if(m&&!e.target.closest('#emenu')&&!e.target.closest('[onclick*="emenu"]'))m.style.display='none';});
