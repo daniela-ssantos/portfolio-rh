@@ -947,23 +947,23 @@ function renderTable(rows,groupByArea){
   const tbody=document.getElementById('tbp');
   if(!rows.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><strong>Nenhum resultado</strong>Ajuste os filtros ou adicione um projeto.</div></td></tr>`;return;}
   let lastArea=null;
-  tbody.innerHTML=rows.map(p=>{
+  tbody.innerHTML=rows.map((p,idx)=>{
     let aH='';
     if(groupByArea&&p.area!==lastArea){lastArea=p.area;aH=`<tr><td colspan="10" style="background:var(--bg);font-weight:600;font-size:11px;color:var(--bordo);text-transform:uppercase;letter-spacing:.06em;padding:9px 12px 5px">${p.area}</td></tr>`;}
     const isB=p.origem==='basic';
     const frl=farolPrazo(p);
     return aH+`<tr class="${isB?'rb':''}">
-      <td style="color:var(--text3);font-size:11px">${p.id}</td>
+      <td style="color:var(--text3);font-size:11px">${idx+1}</td>
       <td style="font-weight:500;max-width:220px">${p.nome}</td>
       <td>${tipoBadge(p)}</td>
       <td style="color:var(--text2);font-size:11px">${p.area}</td>
       <td style="font-size:11px">
         <div style="display:flex;align-items:center;gap:5px;"><span class="dot ${p.status==='Em andamento'?'don':isB?'dbasic':'doff'}"></span>${p.status}</div>
       </td>
+      <td style="color:var(--text2);font-size:11px">${p.end}</td>
       <td style="font-size:11px">
         ${isB?'<span style="font-size:10px;color:var(--text3)">—</span>':(`<span title="${frl.label}" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${frl.cor};background:${frl.cor}1A;padding:2px 8px 2px 6px;border-radius:10px;white-space:nowrap;">● ${frl.label}</span>`)}
       </td>
-      <td style="color:var(--text2);font-size:11px">${p.end}</td>
       <td>${qBadge(p.q)}</td>
       <td>${isB?'<span class="badge b-b">BASIC</span>':'<span style="font-size:10px;color:var(--text3)">Priorizado</span>'}</td>
       <td><div class="ract">
