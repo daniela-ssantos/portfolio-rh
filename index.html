@@ -492,7 +492,8 @@ tr:hover td{background:#fdf5f8;}
       <select id="saude-filtro-farol" onchange="renderSaude()" style="padding:5px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
         <option value="">Todos os farois</option>
         <option value="Atrasado">🔴 Atrasado</option>
-        <option value="Atenção">🟡 Atenção (≤30d)</option>
+        <option value="Em risco">🔴 Em risco</option>
+        <option value="Atenção">🟡 Atenção</option>
         <option value="No prazo">🟢 No prazo</option>
         <option value="Concluído">✅ Concluído</option>
         <option value="Sem prazo">⚪ Sem prazo</option>
@@ -577,14 +578,31 @@ function farolPrazo(p){
   if(p.status==='Concluído') return {cor:'#1E7A4A', label:'Concluído', icon:'●'};
   if(!p.end || p.end==='TBD') return {cor:'#9E9E9E', label:'Sem prazo', icon:'○'};
   const meses={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
-  const m=p.end.match(/(\w+)\/(\d+)/);
-  if(!m) return {cor:'#9E9E9E', label:'Inválido', icon:'○'};
-  const dt=new Date(2000+parseInt(m[2]), meses[m[1].toLowerCase()]||0, 28);
+  const parseDate=s=>{const m=s.match(/(\w{3})\/(\d{2,4})/);if(!m)return null;return new Date(m[2].length===2?2000+parseInt(m[2]):parseInt(m[2]),meses[m[1].toLowerCase()]||0,28);};
+  const dtFim=parseDate(p.end);
+  if(!dtFim) return {cor:'#9E9E9E', label:'Sem prazo', icon:'○'};
   const hoje=new Date();
-  const dias=Math.round((dt-hoje)/86400000);
-  if(dias < 0)  return {cor:'#BF144A', label:'Atrasado',  icon:'●'};
-  if(dias <=30) return {cor:'#C47D00', label:'Atenção',   icon:'●'};
-  return            {cor:'#1E7A4A', label:'No prazo',  icon:'●'};
+  const avanco=p.avanco||0;
+  // Already past deadline
+  if(dtFim<hoje){
+    if(avanco>=100) return {cor:'#1E7A4A', label:'Concluído', icon:'●'};
+    return {cor:'#BF144A', label:'Atrasado', icon:'●'};
+  }
+  // Calculate expected progress based on elapsed time
+  const dtInicio=p.inicio?parseDate(p.inicio):null;
+  if(dtInicio && dtInicio<hoje){
+    const total=dtFim-dtInicio;
+    const decorrido=hoje-dtInicio;
+    const esperado=Math.min(100,Math.round((decorrido/total)*100));
+    const gap=esperado-avanco;
+    if(gap>30) return {cor:'#BF144A', label:'Em risco', icon:'●'};
+    if(gap>10) return {cor:'#C47D00', label:'Atenção',  icon:'●'};
+    return       {cor:'#1E7A4A', label:'No prazo', icon:'●'};
+  }
+  // No inicio date — fall back to deadline proximity only
+  const dias=Math.round((dtFim-hoje)/86400000);
+  if(dias<=30 && avanco<80) return {cor:'#C47D00', label:'Atenção',  icon:'●'};
+  return                           {cor:'#1E7A4A', label:'No prazo', icon:'●'};
 }
 
 // ── RENDER SAÚDE DO PORTFÓLIO ─────────────────────────────
@@ -601,18 +619,20 @@ function renderSaude(){
     return true;
   }).sort((a,b)=>{
     // Sort: Atrasado → Atenção → Em andamento → Não iniciado → Concluído
-    const order={'Atrasado':0,'Atenção':1,'No prazo':2,'Sem prazo':3,'Concluído':4};
+    const order={'Atrasado':0,'Em risco':1,'Atenção':2,'No prazo':3,'Sem prazo':4,'Concluído':5};
     return (order[farolPrazo(a).label]||5)-(order[farolPrazo(b).label]||5);
   });
 
   // Alert counters
   const atrasados = projects.filter(p=>farolPrazo(p).label==='Atrasado').length;
+  const emRisco   = projects.filter(p=>farolPrazo(p).label==='Em risco').length;
   const atencao   = projects.filter(p=>farolPrazo(p).label==='Atenção').length;
   const semQ      = projects.filter(p=>!p.q||p.q==='TBD').length;
   const alertDiv  = document.getElementById('saude-alertas');
   if(alertDiv){
     alertDiv.innerHTML = [
       atrasados>0 ? `<span style="color:#BF144A;font-weight:600;">● ${atrasados} atrasado${atrasados>1?'s':''}</span>` : '',
+      emRisco>0   ? `<span style="color:#BF144A;font-weight:600;">● ${emRisco} em risco</span>` : '',
       atencao>0   ? `<span style="color:#C47D00;font-weight:600;">● ${atencao} em atenção</span>` : '',
       semQ>0      ? `<span style="color:#9E9E9E;">○ ${semQ} sem quarter</span>` : '',
     ].filter(Boolean).join(' · ');
@@ -961,8 +981,15 @@ function renderTable(rows,groupByArea){
         <div style="display:flex;align-items:center;gap:5px;"><span class="dot ${p.status==='Em andamento'?'don':isB?'dbasic':'doff'}"></span>${p.status}</div>
       </td>
       <td style="color:var(--text2);font-size:11px">${p.end}</td>
-      <td style="font-size:11px">
-        ${isB?'<span style="font-size:10px;color:var(--text3)">—</span>':(`<span title="${frl.label}" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${frl.cor};background:${frl.cor}1A;padding:2px 8px 2px 6px;border-radius:10px;white-space:nowrap;">● ${frl.label}</span>`)}
+      <td style="font-size:11px;min-width:100px;">
+        ${isB?'<span style="font-size:10px;color:var(--text3)">—</span>':`
+          <span title="${frl.label}" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${frl.cor};background:${frl.cor}1A;padding:2px 8px 2px 6px;border-radius:10px;white-space:nowrap;margin-bottom:3px;">● ${frl.label}</span>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:2px;">
+            <div style="flex:1;height:4px;background:#e8e8e8;border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:${p.avanco||0}%;background:${frl.cor};border-radius:4px;transition:width .3s;"></div>
+            </div>
+            <span style="font-size:9px;color:var(--text3);min-width:24px;">${p.avanco||0}%</span>
+          </div>`}
       </td>
       <td>${qBadge(p.q)}</td>
       <td>${isB?'<span class="badge b-b">BASIC</span>':'<span style="font-size:10px;color:var(--text3)">Priorizado</span>'}</td>
@@ -1224,6 +1251,13 @@ function buildFormFields(type,data){
     h+=`
     <div class="fi"><label>Tipo <span class="req">*</span></label><select id="f-tipo"><option>Projeto Estruturante</option><option>Melhoria contínua</option></select></div>
     <div class="fi"><label>Status <span class="req">*</span></label><select id="f-status"><option>Não iniciado</option><option>Em andamento</option><option>Concluído</option></select></div>
+    <div class="fi full"><label>% de Avanço <span style="font-size:10px;font-weight:400;text-transform:none;color:var(--text3)">(usado no cálculo do farol junto com o prazo)</span></label>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        <input type="range" id="f-avanco" min="0" max="100" step="5" value="${d.avanco||0}" oninput="document.getElementById('f-avanco-val').textContent=this.value+'%'" style="flex:1;accent-color:var(--magenta);cursor:pointer;">
+        <span id="f-avanco-val" style="font-size:13px;font-weight:600;color:var(--magenta);min-width:38px;text-align:right;">${d.avanco||0}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px;"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+    </div>
     <div class="fi"><label>Início</label><input type="text" id="f-inicio" value="${esc(d.inicio||'')}" placeholder="ex: jan/26"></div>
     <div class="fi"><label>Término previsto <span class="req">*</span></label><input type="text" id="f-end" value="${esc(d.end||'')}" placeholder="ex: jun/26" oninput="autoFillQ()"></div>
     <div class="fi"><label>Quarter</label><select id="f-q"><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option><option value="TBD">Não definido</option></select></div>
@@ -1385,6 +1419,7 @@ async function saveProjeto(){
       tipo:document.getElementById('f-tipo').value,status:document.getElementById('f-status').value,
       inicio:document.getElementById('f-inicio')?.value||'',
       end:endVal,q:document.getElementById('f-q')?.value||autoQ(endVal),origem:'priorizado',
+      avanco:parseInt(document.getElementById('f-avanco')?.value||0),
       historico:document.getElementById('f-historico')?.value||''};
     if(editId){
       Object.assign(projects.find(x=>x.id===editId),data);
@@ -1693,6 +1728,14 @@ function showPreview(id, isBasic, event){
   if(!isBasic){
     const f=farolPrazo(p);
     content += `<div class="preview-row"><div class="preview-label">Farol</div><div class="preview-val"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;background:${f.cor}1A;color:${f.cor};">● ${f.label}</span></div></div>`;
+    content += `<div class="preview-row"><div class="preview-label">% Avanço</div><div class="preview-val" style="width:100%;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;height:6px;background:#e8e8e8;border-radius:4px;overflow:hidden;max-width:160px;">
+          <div style="height:100%;width:${p.avanco||0}%;background:${f.cor};border-radius:4px;"></div>
+        </div>
+        <span style="font-size:12px;font-weight:600;color:${f.cor};">${p.avanco||0}%</span>
+      </div>
+    </div></div>`;
     if(p.inicio) content += `<div class="preview-row"><div class="preview-label">Início</div><div class="preview-val">${esc(p.inicio)}</div></div>`;
     content += `<div class="preview-row"><div class="preview-label">📋 Histórico</div><div class="preview-val" style="white-space:pre-wrap;color:${p.historico?'var(--text2)':'#bbb'};font-style:${p.historico?'normal':'italic'};">${p.historico?esc(p.historico):'Nenhum histórico registrado'}</div></div>`;
   }
@@ -1779,7 +1822,7 @@ async function loadAllData(){
         id:r.id, nome:r.nome, desc:r.descricao||'', benef:r.beneficio||'',
         tipo:r.tipo||'Melhoria contínua', area:r.area||'', prio:r.prio||'Média',
         status:r.status||'Não iniciado', inicio:r.inicio||'', end:r.termino||'', q:r.quarter||'TBD',
-        origem:r.origem||'priorizado', historico:r.historico||''
+        origem:r.origem||'priorizado', avanco:r.avanco||0, historico:r.historico||''
       }));
     } else {
       await seedInitialData();
@@ -1838,7 +1881,7 @@ async function saveProjetoToDB(data, id){
     nome:data.nome, descricao:data.desc, beneficio:data.benef,
     tipo:data.tipo, area:data.area, prio:data.prio,
     status:data.status, inicio:data.inicio||'', termino:data.end, quarter:data.q,
-    origem:data.origem, historico:data.historico||'', updated_at:new Date().toISOString()
+    origem:data.origem, avanco:data.avanco||0, historico:data.historico||'', updated_at:new Date().toISOString()
   };
   if(id){
     await supa.from('projetos').update(row).eq('id',id);
