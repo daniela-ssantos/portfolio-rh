@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · 2026 · v20</title>
+<title>Portfólio RH · 2026 · v21</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -77,13 +77,13 @@ tr:hover td{background:#fdf5f8;}
 .rb td{background:#f8f5fc!important;}
 /* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:100px;font-size:10px;font-weight:500;white-space:nowrap;}
-.b-e{background:#f0e8f4;color:#5c1a6e;}
-.b-m{background:#e8eff8;color:#1a3a6e;}
+.b-e{background:#f0f0f0;color:#444;}
+.b-m{background:#f0f0f0;color:#444;}
 .b-b{background:#fdf0f5;color:var(--bordo-luz);border:1px dashed var(--rosa);}
-.b-q1{background:#f0e8f4;color:#2E101E;}
-.b-q2{background:#f0e8f4;color:#662046;}
-.b-q3{background:#ffe8f0;color:var(--magenta);}
-.b-q4{background:#ffe0ec;color:#8a003a;}
+.b-q1{background:#f0f0f0;color:#444;}
+.b-q2{background:#f0f0f0;color:#444;}
+.b-q3{background:#f0f0f0;color:#444;}
+.b-q4{background:#f0f0f0;color:#444;}
 .b-tbd{background:var(--bg);color:var(--text3);}
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;}
 .don{background:#1D9E75;}.doff{background:var(--cinza);}.dbasic{background:#181818;}
@@ -237,12 +237,12 @@ tr:hover td{background:#fdf5f8;}
 .mdd-btn.sel{background:var(--bordo);color:var(--branco);border-color:var(--bordo);}
 
 /* preview popup */
-.preview-popup{position:fixed;z-index:250;background:var(--branco);border:1px solid var(--border2);border-radius:var(--rl);padding:16px 18px;width:340px;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.15);pointer-events:none;border-top:3px solid var(--rosa);}
-.preview-popup h4{font-size:13px;font-weight:500;color:var(--bordo);margin-bottom:8px;line-height:1.3;}
-.preview-row{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;}
+.preview-popup{position:fixed;z-index:250;background:var(--branco);border:1px solid var(--border2);border-radius:var(--rl);padding:14px 16px;width:300px;max-width:90vw;max-height:70vh;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);pointer-events:none;border-top:3px solid var(--rosa);}
+.preview-popup h4{font-size:12px;font-weight:600;color:var(--bordo);margin-bottom:8px;line-height:1.3;}
+.preview-row{display:flex;flex-direction:column;gap:1px;margin-bottom:6px;}
 .preview-row:last-child{margin-bottom:0;}
-.preview-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
-.preview-val{font-size:12px;color:var(--text2);line-height:1.4;}
+.preview-label{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
+.preview-val{font-size:11px;color:var(--text2);line-height:1.4;}
 
 .th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:background .15s;}
 .th-sort:hover{background:#662046;color:#fff;}
@@ -262,7 +262,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v20</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v21</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -893,9 +893,9 @@ document.addEventListener('click',e=>{if(!e.target.closest('.sw'))document.query
 // ── BADGES ────────────────────────────────────────────────
 function tipoBadge(p){
   const isE=p.tipo&&p.tipo.includes('Estruturante');
-  return isE?`<span class="badge b-e">Estruturante</span>`:`<span class="badge b-m">Melhoria</span>`;
+  return `<span style="font-size:11px;color:var(--text2)">${isE?'Estruturante':'Melhoria'}</span>`;
 }
-function qBadge(q){const c={Q1:'b-q1',Q2:'b-q2',Q3:'b-q3',Q4:'b-q4',TBD:'b-tbd'};return `<span class="badge ${c[q]||'b-tbd'}">${q==='TBD'?'Não def.':q}</span>`;}
+function qBadge(q){return `<span style="font-size:11px;color:var(--text2)">${q==='TBD'?'Não def.':q||'—'}</span>`;}
 
 // ── METRICS ───────────────────────────────────────────────
 function renderMetrics(){
@@ -1723,8 +1723,6 @@ function showPreview(id, isBasic, event){
   } else {
     content += `<div class="preview-row"><div class="preview-label">Prioridade</div><div class="preview-val">${esc(p.prio||'—')}</div></div>`;
   }
-  content += `<div class="preview-row"><div class="preview-label">Descrição</div><div class="preview-val">${esc(desc||'Não preenchida')}</div></div>`;
-  content += `<div class="preview-row"><div class="preview-label">Benefício esperado</div><div class="preview-val">${esc(benef||'Não preenchido')}</div></div>`;
   if(!isBasic){
     const f=farolPrazo(p);
     content += `<div class="preview-row"><div class="preview-label">Farol</div><div class="preview-val"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;background:${f.cor}1A;color:${f.cor};">● ${f.label}</span></div></div>`;
@@ -1922,95 +1920,180 @@ async function updateQuarterDB(id, origem, quarter){
   }
 }
 
-// ── BIND LOGIN BUTTONS AFTER DOM READY ───────────────────
 // ── EXPORT / IMPORT ───────────────────────────────────────
+function csvDownload(filename, cols, rows, sep=';'){
+  // Sanitize cell: remove inner line breaks, wrap in quotes if needed
+  const cell = v => {
+    if(v==null) return '';
+    const s = String(v).replace(/\r?\n|\r/g,' ').replace(/\s+/g,' ').trim();
+    return (s.includes(sep)||s.includes('"')||s.includes(',')) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  };
+  const lines = [cols.join(sep), ...rows.map(r=>cols.map(c=>cell(r[c]??r[cols.indexOf(c)]??'')).join(sep))];
+  // BOM (\uFEFF) ensures Excel opens with correct UTF-8 encoding
+  const blob = new Blob(['\uFEFF'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
 function downloadTemplate(tipo){
-  let cols, rows, filename;
   if(tipo==='priorizado'){
-    cols=['origem','nome','descricao','beneficio','tipo_projeto','area','prioridade','status','termino','quarter'];
-    rows=[
-      ['Priorizado','Nome do Projeto','Descrição da iniciativa','Benefício esperado','Projeto Estruturante','Benefícios','Alta','Não iniciado','jun/26','Q2'],
-      ['Priorizado','Outro Projeto Exemplo','Descrição aqui','Benefício aqui','Melhoria contínua','Atendimento','Média','Em andamento','set/26','Q3'],
+    const cols=['nome','descricao','beneficio','tipo_projeto','area','prioridade','status','inicio','termino','quarter','avanco','historico','origem'];
+    const instrucoes={
+      nome:'Nome do projeto',
+      descricao:'O que é e o que resolve',
+      beneficio:'Benefício esperado para o negócio',
+      tipo_projeto:'Projeto Estruturante | Melhoria contínua',
+      area:'Ex: Benefícios, Remuneração, Admissão e Cadastro...',
+      prioridade:'Alta | Média | Baixa',
+      status:'Não iniciado | Em andamento | Concluído',
+      inicio:'Ex: jan/26 (mês/ano de início)',
+      termino:'Ex: jun/26 (mês/ano de término previsto)',
+      quarter:'Q1 | Q2 | Q3 | Q4 | TBD',
+      avanco:'% de avanço — número de 0 a 100',
+      historico:'Últimas atualizações (texto livre, ex: abr/26 — Kick-off realizado)',
+      origem:'Priorizado (fixo)'
+    };
+    const rows=[
+      {nome:'Nome do Projeto',descricao:'Descrição da iniciativa (o que é e o que resolve)',beneficio:'Benefício esperado (ex: redução de retrabalho, conformidade)',tipo_projeto:'Melhoria contínua',area:'Benefícios',prioridade:'Alta',status:'Não iniciado',inicio:'jan/26',termino:'jun/26',quarter:'Q2',avanco:0,historico:'',origem:'Priorizado'},
+      {nome:'Outro Projeto Exemplo',descricao:'Descrição aqui',beneficio:'Benefício aqui',tipo_projeto:'Projeto Estruturante',area:'Atendimento',prioridade:'Média',status:'Em andamento',inicio:'mar/26',termino:'set/26',quarter:'Q3',avanco:40,historico:'abr/26 — Kick-off realizado',origem:'Priorizado'},
+      Object.fromEntries(cols.map(c=>[c,instrucoes[c]||'']))
     ];
-    filename='template-priorizados.csv';
-  } else {
-    cols=['origem','nome','descricao','beneficio','area','prioridade'];
-    rows=[
-      ['BASIC','Nome da Iniciativa BASIC','Descrição da iniciativa','Benefício esperado','Remuneração','Alta'],
-      ['BASIC','Outra Iniciativa BASIC','Descrição aqui','Benefício aqui','DHO','Média'],
+    csvDownload('template-priorizados.csv', cols, rows);
+    toast('Template baixado!'); else {
+    // BASIC template — all fields including scoring criteria
+    const cols=[
+      'nome','descricao','beneficio','area','prioridade','origem',
+      'biz_risco','biz_cultura','biz_eficiencia','biz_experiencia','biz_talentos',
+      'ti_areas','ti_tempo','ti_complexidade'
     ];
-    filename='template-basic.csv';
+    const instrucoes={
+      nome:'Nome da iniciativa',
+      descricao:'O que é e o que resolve',
+      beneficio:'Benefício esperado para o negócio',
+      area:'Ex: Benefícios, Remuneração, Admissão e Cadastro...',
+      prioridade:'Alta | Média | Baixa',
+      origem:'BASIC (fixo)',
+      biz_risco:'Riscos e Conformidade (peso 5) — notas: 0, 1, 3 ou 5',
+      biz_cultura:'Cultura, Liderança e Marca Empregadora (peso 4) — notas: 0, 1, 3 ou 5',
+      biz_eficiencia:'Eficiência e Desempenho Organizacional (peso 3) — notas: 0, 1, 3 ou 5',
+      biz_experiencia:'Experiência do Colaborador (peso 2) — notas: 0, 1, 3 ou 5',
+      biz_talentos:'Atração, Retenção e Desenvolvimento de Talentos (peso 1) — notas: 0, 1, 3 ou 5',
+      ti_areas:'Áreas Envolvidas: 5=Alto(0-3 áreas) | 3=Médio(3-5) | 1=Baixo(acima de 5) — preenchido por TI',
+      ti_tempo:'Tempo em Horas: 5=Alto(até 160h) | 3=Médio(160-480h) | 1=Baixo(acima 480h) — preenchido por TI',
+      ti_complexidade:'Complexidade: 5=Baixa | 3=Média | 1=Alta — preenchido por TI'
+    };
+    const rows=[
+      {nome:'Nome da Iniciativa BASIC',descricao:'Descrição da iniciativa',beneficio:'Benefício esperado',area:'Remuneração',prioridade:'Alta',origem:'BASIC',biz_risco:3,biz_cultura:1,biz_eficiencia:5,biz_experiencia:3,biz_talentos:1,ti_areas:'',ti_tempo:'',ti_complexidade:''},
+      {nome:'Outra Iniciativa BASIC',descricao:'Descrição aqui',beneficio:'Benefício aqui',area:'DHO',prioridade:'Média',origem:'BASIC',biz_risco:1,biz_cultura:3,biz_eficiencia:3,biz_experiencia:1,biz_talentos:5,ti_areas:'',ti_tempo:'',ti_complexidade:''},
+      Object.fromEntries(cols.map(c=>[c,instrucoes[c]||''])) // instruction row
+    ];
+    csvDownload('template-basic.csv', cols, rows);
   }
-  const csvRows=[cols.join(';'),...rows.map(r=>r.map(v=>v.includes(';')?'"'+v+'"':v).join(';'))];
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csvRows.join('\r\n'));
-  a.download=filename;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
   toast('Template baixado!');
 }
 
 function exportCSV(){
+  const cols = ['tipo','id','nome','descricao','beneficio','tipo_projeto','area','prioridade','status','inicio','termino','quarter','avanco','historico','score_negocio','score_ti'];
   const allP = [
     ...projects.map(p=>({
       tipo:'Priorizado', id:p.id, nome:p.nome, descricao:p.desc||'',
       beneficio:p.benef||'', tipo_projeto:p.tipo, area:p.area,
-      prioridade:p.prio, status:p.status, termino:p.end, quarter:p.q
+      prioridade:p.prio, status:p.status, inicio:p.inicio||'',
+      termino:p.end, quarter:p.q, avanco:p.avanco||0,
+      historico:p.historico||'', score_negocio:'', score_ti:''
     })),
     ...basicItems.map(b=>({
       tipo:'BASIC', id:b.id, nome:b.nome, descricao:b.desc||'',
       beneficio:b.benef||'', tipo_projeto:'Melhoria contínua', area:b.area,
-      prioridade:b.prio, status:'Não iniciado', termino:'TBD',
-      quarter:b._q||'TBD',
-      score_negocio:calcBizScore(b.bizScores),
+      prioridade:b.prio, status:'Não iniciado', inicio:'',
+      termino:'TBD', quarter:b._q||'TBD', avanco:0, historico:'',
+      score_negocio:calcBizScore(b.bizScores)||'',
       score_ti:calcTIScore(b.tiScores)||'Aguarda TI'
     }))
   ];
-  const cols = ['tipo','id','nome','descricao','beneficio','tipo_projeto','area','prioridade','status','termino','quarter','score_negocio','score_ti'];
-  const esc = v => v==null?'':'"'+String(v).replace(/"/g,'""')+'"';
-  const rows = [cols.join(','), ...allP.map(r=>cols.map(c=>esc(r[c])).join(','))];
-  const a2=document.createElement('a');a2.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.join('\r\n'));a2.download='portfolio-rh-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a2);a2.click();document.body.removeChild(a2)
+  csvDownload('portfolio-rh-'+new Date().toISOString().slice(0,10)+'.csv', cols, allP);
   toast('Exportado com sucesso.');
 }
 
 async function importCSV(event){
   const file = event.target.files[0];
   if(!file) return;
-  const text = await file.text();
+  // Strip BOM if present
+  let text = await file.text();
+  text = text.replace(/^\uFEFF/,'');
   const lines = text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length < 2){ toast('Arquivo vazio ou inválido.'); return; }
-  const headers = lines[0].replace(/^\uFEFF/,'').split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  // Auto-detect separator: semicolon or comma
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(sep).map(h=>h.replace(/"/g,'').trim().toLowerCase());
   const getCol = (row, name) => {
     const idx = headers.indexOf(name);
     if(idx<0) return '';
-    const parts = row.match(/(".*?"|[^,]+)(?=,|$)/g)||[];
-    return (parts[idx]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim();
+    // Parse respecting quoted fields
+    const parts=[];let cur='',inQ=false;
+    for(const ch of row+sep){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===sep&&!inQ){parts.push(cur.replace(/^"|"$/g,'').replace(/""/g,'"').trim());cur='';}
+      else cur+=ch;
+    }
+    return parts[idx]||'';
   };
-  let added = 0, skipped = 0;
+  const getNum = (row,name) => { const v=parseInt(getCol(row,name)); return isNaN(v)?0:v; };
+  let added=0, updated=0, skipped=0;
   for(let i=1;i<lines.length;i++){
-    const row = lines[i];
+    const row=lines[i];
     if(!row.trim()) continue;
-    const nome = getCol(row,'nome');
-    if(!nome){ skipped++; continue; }
-    const tipo = getCol(row,'tipo')||'Priorizado';
-    const area = getCol(row,'area')||AREAS[0];
+    const nome=getCol(row,'nome');
+    // Skip instruction rows (no valid nome or nome looks like a description)
+    if(!nome||nome.length>80||nome.startsWith('Nome do')||nome.startsWith('Outro')||nome.startsWith('O que')) { skipped++; continue; }
+    const tipo=getCol(row,'tipo')||getCol(row,'origem')||'Priorizado';
+    const area=getCol(row,'area')||AREAS[0];
     if(tipo.toLowerCase()==='basic'){
-      if(!basicItems.find(b=>b.nome===nome)){
-        const newId = await saveBasicToDB({nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),area,prio:getCol(row,'prioridade')||'Média',bizScores:{},tiScores:{}},null);
-        basicItems.push({id:newId||nextId++,nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),area,prio:getCol(row,'prioridade')||'Média',bizScores:{},tiScores:{}});
+      const bizScores={
+        risco:getNum(row,'biz_risco'), cultura:getNum(row,'biz_cultura'),
+        eficiencia:getNum(row,'biz_eficiencia'), experiencia:getNum(row,'biz_experiencia'),
+        talentos:getNum(row,'biz_talentos')
+      };
+      const tiRaw={areas:getNum(row,'ti_areas'),tempo:getNum(row,'ti_tempo'),complexidade:getNum(row,'ti_complexidade')};
+      const tiScores=Object.values(tiRaw).some(v=>v>0)?tiRaw:{};
+      const bData={nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),area,prio:getCol(row,'prioridade')||'Média',bizScores,tiScores};
+      const existing=basicItems.find(b=>b.nome===nome);
+      if(existing){
+        Object.assign(existing,bData);
+        await saveBasicToDB(bData,existing.id);
+        updated++;
+      } else {
+        const newId=await saveBasicToDB(bData,null);
+        basicItems.push({id:newId||nextId++,...bData,_q:null});
         added++;
-      } else skipped++;
+      }
     } else {
-      if(!projects.find(p=>p.nome===nome)){
-        const data={nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),tipo:getCol(row,'tipo_projeto')||'Melhoria contínua',area,prio:getCol(row,'prioridade')||'Média',status:getCol(row,'status')||'Não iniciado',end:getCol(row,'termino')||'',q:getCol(row,'quarter')||'TBD',origem:'priorizado'};
-        const newId = await saveProjetoToDB(data,null);
+      const data={
+        nome, desc:getCol(row,'descricao'), benef:getCol(row,'beneficio'),
+        tipo:getCol(row,'tipo_projeto')||'Melhoria contínua', area,
+        prio:getCol(row,'prioridade')||'Média', status:getCol(row,'status')||'Não iniciado',
+        inicio:getCol(row,'inicio')||'', end:getCol(row,'termino')||'',
+        q:getCol(row,'quarter')||'TBD', avanco:getNum(row,'avanco'),
+        historico:getCol(row,'historico')||'', origem:'priorizado'
+      };
+      const existing=projects.find(p=>p.nome===nome);
+      if(existing){
+        Object.assign(existing,data);
+        await saveProjetoToDB(data,existing.id);
+        updated++;
+      } else {
+        const newId=await saveProjetoToDB(data,null);
         projects.push({id:newId||nextId++,...data});
         added++;
-      } else skipped++;
+      }
     }
   }
   event.target.value='';
   renderAll();
-  toast(`Importados: ${added} | Ignorados (duplicados): ${skipped}`);
+  toast(`Importados: ${added} novos | ${updated} atualizados | ${skipped} ignorados`);
 }
 
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
