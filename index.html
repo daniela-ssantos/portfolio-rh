@@ -341,7 +341,7 @@ tr:hover td{background:#fdf5f8;}
         <th class="th-sort" data-sort-table="p" data-sort-col="area" onclick="sortTable('p','area')">Área</th>
         <th class="th-sort" data-sort-table="p" data-sort-col="status" onclick="sortTable('p','status')">Status</th>
         <th class="th-sort" data-sort-table="p" data-sort-col="end" onclick="sortTable('p','end')">Previsão</th>
-        <th style="white-space:nowrap;cursor:default">Farol</th>
+        <th class="th-sort" data-sort-table="p" data-sort-col="farol" onclick="sortTable('p','farol')" style="white-space:nowrap;" title="Ordenar por farol">Farol ⇅</th>
         <th class="th-sort" data-sort-table="p" data-sort-col="q" onclick="sortTable('p','q')">Quarter</th>
         <th class="th-sort" data-sort-table="p" data-sort-col="origem" onclick="sortTable('p','origem')">Origem</th>
         <th style="width:78px"></th>
@@ -581,34 +581,32 @@ tr:hover td{background:#fdf5f8;}
 
 // ── FAROL DE PRAZO ────────────────────────────────────────
 function farolPrazo(p){
-  if(p.status==='Concluído') return {cor:'#1E7A4A', label:'Concluído', icon:'●'};
-  if(!p.end || p.end==='TBD') return {cor:'#9E9E9E', label:'Sem prazo', icon:'○'};
+  if(p.status==='Concluído') return {cor:'#1E7A4A', label:'Concluído'};
+  if(!p.end||p.end==='TBD')  return {cor:'#9E9E9E', label:'Sem prazo'};
   const meses={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
-  const parseDate=s=>{const m=s.match(/(\w{3})\/(\d{2,4})/);if(!m)return null;return new Date(m[2].length===2?2000+parseInt(m[2]):parseInt(m[2]),meses[m[1].toLowerCase()]||0,28);};
-  const dtFim=parseDate(p.end);
-  if(!dtFim) return {cor:'#9E9E9E', label:'Sem prazo', icon:'○'};
-  const hoje=new Date();
-  const avanco=p.avanco||0;
-  // Already past deadline
-  if(dtFim<hoje){
-    if(avanco>=100) return {cor:'#1E7A4A', label:'Concluído', icon:'●'};
-    return {cor:'#BF144A', label:'Atrasado', icon:'●'};
-  }
-  // Calculate expected progress based on elapsed time
-  const dtInicio=p.inicio?parseDate(p.inicio):null;
-  if(dtInicio && dtInicio<hoje){
+  const parse=s=>{const m=s.match(/(\w{3})\/(\d{2,4})/i);if(!m)return null;return new Date(m[2].length===2?2000+parseInt(m[2]):parseInt(m[2]),meses[m[1].toLowerCase()]||0,28);};
+  const dtFim=parse(p.end);
+  if(!dtFim) return {cor:'#9E9E9E', label:'Sem prazo'};
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const av=p.avanco||0;
+  // 🔴 ATRASADO — passou a data de término e não está concluído
+  if(dtFim<hoje) return {cor:'#BF144A', label:'Atrasado'};
+  // Para projetos com data de início informada, calcular % esperado
+  const dtInicio=p.inicio?parse(p.inicio):null;
+  if(dtInicio&&dtInicio<hoje){
     const total=dtFim-dtInicio;
     const decorrido=hoje-dtInicio;
     const esperado=Math.min(100,Math.round((decorrido/total)*100));
-    const gap=esperado-avanco;
-    if(gap>30) return {cor:'#BF144A', label:'Em risco', icon:'●'};
-    if(gap>10) return {cor:'#C47D00', label:'Atenção',  icon:'●'};
-    return       {cor:'#1E7A4A', label:'No prazo', icon:'●'};
+    const gap=esperado-av;
+    // 🔴 EM RISCO — avanço muito abaixo do esperado (gap > 20pp)
+    if(gap>20) return {cor:'#E05A00', label:'Em risco'};
+    // 🟢 NO PRAZO — avanço adequado
+    return {cor:'#1E7A4A', label:'No prazo'};
   }
-  // No inicio date — fall back to deadline proximity only
+  // Sem data de início — verificar apenas proximidade do prazo vs avanço
   const dias=Math.round((dtFim-hoje)/86400000);
-  if(dias<=30 && avanco<80) return {cor:'#C47D00', label:'Atenção',  icon:'●'};
-  return                           {cor:'#1E7A4A', label:'No prazo', icon:'●'};
+  if(dias<=45&&av<60) return {cor:'#E05A00', label:'Em risco'};
+  return {cor:'#1E7A4A', label:'No prazo'};
 }
 
 // ── RENDER SAÚDE DO PORTFÓLIO ─────────────────────────────
@@ -625,21 +623,19 @@ function renderSaude(){
     return true;
   }).sort((a,b)=>{
     // Sort: Atrasado → Atenção → Em andamento → Não iniciado → Concluído
-    const order={'Atrasado':0,'Em risco':1,'Atenção':2,'No prazo':3,'Sem prazo':4,'Concluído':5};
+    const order={'Atrasado':0,'Em risco':1,'No prazo':2,'Sem prazo':3,'Concluído':4};
     return (order[farolPrazo(a).label]||5)-(order[farolPrazo(b).label]||5);
   });
 
   // Alert counters
   const atrasados = projects.filter(p=>farolPrazo(p).label==='Atrasado').length;
   const emRisco   = projects.filter(p=>farolPrazo(p).label==='Em risco').length;
-  const atencao   = projects.filter(p=>farolPrazo(p).label==='Atenção').length;
   const semQ      = projects.filter(p=>!p.q||p.q==='TBD').length;
   const alertDiv  = document.getElementById('saude-alertas');
   if(alertDiv){
     alertDiv.innerHTML = [
       atrasados>0 ? `<span style="color:#BF144A;font-weight:600;">● ${atrasados} atrasado${atrasados>1?'s':''}</span>` : '',
-      emRisco>0   ? `<span style="color:#BF144A;font-weight:600;">● ${emRisco} em risco</span>` : '',
-      atencao>0   ? `<span style="color:#C47D00;font-weight:600;">● ${atencao} em atenção</span>` : '',
+      emRisco>0   ? `<span style="color:#E05A00;font-weight:600;">● ${emRisco} em risco</span>` : '',
       semQ>0      ? `<span style="color:#9E9E9E;">○ ${semQ} sem quarter</span>` : '',
     ].filter(Boolean).join(' · ');
   }
@@ -722,8 +718,8 @@ const BIZ_CRITERIA=[
   {id:'talentos',label:'Atração, Retenção e Desenvolvimento de Talentos',peso:1},
 ];
 const TI_CRITERIA=[
-  {id:'areas',label:'Áreas Envolvidas (Qtd)',peso:4,opts:[{v:5,l:'Alto · 0 a 3 áreas'},{v:3,l:'Médio · 3 a 5 áreas'},{v:1,l:'Baixo · acima de 5'}]},
-  {id:'tempo',label:'Tempo Estimado em Horas',peso:3,opts:[{v:5,l:'Alto · até 160h (PP, P)'},{v:3,l:'Médio · 160h–480h (M, G)'},{v:1,l:'Baixo · acima de 480h (GG)'}]},
+  {id:'areas',label:'Áreas Envolvidas (Qtd)',peso:4,opts:[{v:5,l:'Até 3 áreas'},{v:3,l:'3 a 5 áreas'},{v:1,l:'Acima de 5 áreas'}]},
+  {id:'tempo',label:'Tempo Estimado em Horas',peso:3,opts:[{v:5,l:'Até 160h (PP, P)'},{v:3,l:'160h – 480h (M, G)'},{v:1,l:'Acima de 480h (GG)'}]},
   {id:'complexidade',label:'Complexidade Técnica',peso:2,opts:[{v:5,l:'Baixa'},{v:3,l:'Média'},{v:1,l:'Alta'}]},
 ];
 const NOTAS=[0,1,3,5];
@@ -1541,8 +1537,15 @@ async function saveBasicItem(){
     desc:document.getElementById('bf-desc').value,benef:document.getElementById('bf-benef').value,
     area:document.getElementById('bf-area').value,prio:document.getElementById('bf-prio').value,
     bizScores:bizSc,tiScores:editBasicId?tiSc:{}};
-  if(editBasicId){Object.assign(basicItems.find(x=>x.id===editBasicId),item);toast('Atualizado.');}
-  else{basicItems.push({id:nextId++,...item});toast('Iniciativa adicionada ao BASIC.');}
+  if(editBasicId){
+    Object.assign(basicItems.find(x=>x.id===editBasicId),item);
+    await saveBasicToDB(item,editBasicId);
+    toast('Atualizado e salvo.');
+  } else {
+    const newId=await saveBasicToDB(item,null);
+    basicItems.push({id:newId||nextId++,...item});
+    toast('Iniciativa adicionada ao BASIC.');
+  }
   closeMo('mob');renderAll();
 }
 
@@ -1792,9 +1795,15 @@ function sortTable(tableKey, col){
 function applySortP(rows){
   const {col,dir} = sortState.p;
   if(!col) return rows;
+  const farolOrder={'Atrasado':0,'Em risco':1,'No prazo':2,'Sem prazo':3,'Concluído':4};
   return [...rows].sort((a,b)=>{
-    let av=a[col]||'', bv=b[col]||'';
     if(col==='id') return (a.id-b.id)*dir;
+    if(col==='farol'){
+      const fa=farolOrder[farolPrazo(a).label]??5;
+      const fb=farolOrder[farolPrazo(b).label]??5;
+      return (fa-fb)*dir;
+    }
+    let av=a[col]||'', bv=b[col]||'';
     return String(av).localeCompare(String(bv),'pt-BR')*dir;
   });
 }
@@ -2000,8 +2009,10 @@ function downloadTemplate(tipo){
       'Nome da Iniciativa',
       'Descrição (o que é e o que resolve)',
       'Benefício Econômico ou Operacional',
+      'Tipo (Projeto Estruturante | Melhoria contínua)',
       'Área Solicitante',
       'Prioridade (Alta | Média | Baixa)',
+      'Status (Não iniciado | Em andamento | Concluído)',
       'Origem (fixo: BASIC)',
       'Riscos e Conformidade — peso 5 (notas: 0, 1, 3 ou 5)',
       'Cultura, Liderança e Marca Empregadora — peso 4 (notas: 0, 1, 3 ou 5)',
@@ -2012,13 +2023,15 @@ function downloadTemplate(tipo){
       'Tempo Estimado — TI (5=até 160h | 3=160-480h | 1=acima de 480h)',
       'Complexidade Técnica — TI (5=Baixa | 3=Média | 1=Alta)'
     ];
-    const cols=['nome','descricao','beneficio','area','prioridade','origem','biz_risco','biz_cultura','biz_eficiencia','biz_experiencia','biz_talentos','ti_areas','ti_tempo','ti_complexidade'];
+    const cols=['nome','descricao','beneficio','tipo_projeto','area','prioridade','status','origem','biz_risco','biz_cultura','biz_eficiencia','biz_experiencia','biz_talentos','ti_areas','ti_tempo','ti_complexidade'];
     const exemplo={
       nome:'## EXEMPLO — apague esta linha antes de importar',
       descricao:'Automatizar o envio de cartas de remuneração via portal do colaborador',
       beneficio:'Eliminar processo manual, reduzir erros e garantir rastreabilidade',
+      tipo_projeto:'Melhoria contínua',
       area:'Remuneração',
       prioridade:'Alta',
+      status:'Não iniciado',
       origem:'BASIC',
       biz_risco:3, biz_cultura:1, biz_eficiencia:5, biz_experiencia:3, biz_talentos:1,
       ti_areas:'', ti_tempo:'', ti_complexidade:''
