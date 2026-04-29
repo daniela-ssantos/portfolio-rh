@@ -323,7 +323,13 @@ tr:hover td{background:#fdf5f8;}
       <button onclick="exportCSV();document.getElementById('emenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;border-bottom:1px solid #f0f0f0;cursor:pointer;text-align:left;color:#333;">📄 Lista de projetos (CSV)</button>
       <button id="btn-exec" onclick="exportExecutivo();document.getElementById('emenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;cursor:pointer;text-align:left;color:#333;">📊 Visão executiva (PPTX)</button>
     </div></div>
-    <button onclick="downloadTemplate('priorizado')" style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--cinza);border:1px solid var(--cinza);border-radius:var(--r);cursor:pointer;white-space:nowrap;" title="Baixar modelo para importação">📋 Template</button>
+    <div style="position:relative;display:inline-block;">
+      <button onclick="const m=document.getElementById('tmenu');m.style.display=m.style.display==='block'?'none':'block'" style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--cinza);border:1px solid var(--cinza);border-radius:var(--r);cursor:pointer;white-space:nowrap;" title="Baixar modelo para importação">📋 Template ▾</button>
+      <div id="tmenu" style="display:none;position:absolute;top:100%;left:0;z-index:300;background:var(--branco);border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:190px;margin-top:4px;">
+        <button onclick="downloadTemplate('priorizado');document.getElementById('tmenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;border-bottom:1px solid #f0f0f0;cursor:pointer;text-align:left;color:#333;">📄 Priorizados</button>
+        <button onclick="downloadTemplate('basic');document.getElementById('tmenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;cursor:pointer;text-align:left;color:#333;">📄 Pipeline BASIC</button>
+      </div>
+    </div>
     <label style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo-luz);border:1px solid var(--bordo-luz);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↑ Importar<input type="file" accept=".csv" style="display:none" onchange="importCSV(event)"></label>
   </div>
   <div class="twrap">
@@ -1940,57 +1946,95 @@ function csvDownload(filename, cols, rows, sep=';'){
 
 function downloadTemplate(tipo){
   if(tipo==='priorizado'){
+    // Row 1: descriptive column headers (used as actual CSV header)
+    const headers=[
+      'Nome da Iniciativa',
+      'Descrição (o que é e o que resolve)',
+      'Benefício Econômico ou Operacional',
+      'Tipo (Projeto Estruturante | Melhoria contínua)',
+      'Área Solicitante',
+      'Prioridade (Alta | Média | Baixa)',
+      'Status (Não iniciado | Em andamento | Concluído)',
+      'Início (ex: jan/26)',
+      'Término Previsto (ex: jun/26)',
+      'Quarter (Q1 | Q2 | Q3 | Q4 | TBD)',
+      '% de Avanço (0 a 100)',
+      'Histórico / Últimas atualizações',
+      'Origem (fixo: Priorizado)'
+    ];
+    // Internal keys used by importCSV
     const cols=['nome','descricao','beneficio','tipo_projeto','area','prioridade','status','inicio','termino','quarter','avanco','historico','origem'];
-    const instrucoes={
-      nome:'Nome do projeto',
-      descricao:'O que é e o que resolve',
-      beneficio:'Benefício esperado para o negócio',
-      tipo_projeto:'Projeto Estruturante | Melhoria contínua',
-      area:'Ex: Benefícios, Remuneração, Admissão e Cadastro...',
-      prioridade:'Alta | Média | Baixa',
-      status:'Não iniciado | Em andamento | Concluído',
-      inicio:'Ex: jan/26 (mês/ano de início)',
-      termino:'Ex: jun/26 (mês/ano de término previsto)',
-      quarter:'Q1 | Q2 | Q3 | Q4 | TBD',
-      avanco:'% de avanço — número de 0 a 100',
-      historico:'Últimas atualizações (texto livre, ex: abr/26 — Kick-off realizado)',
-      origem:'Priorizado (fixo)'
+    // Row 2: example (prefixed with ## so importCSV skips it)
+    const exemplo={
+      nome:'## EXEMPLO — apague esta linha antes de importar',
+      descricao:'Automatizar o processo de admissão integrando ServiceNow e Protheus',
+      beneficio:'Redução de 40% no tempo de cadastro e eliminação de retrabalho manual',
+      tipo_projeto:'Melhoria contínua',
+      area:'Admissão e Cadastro',
+      prioridade:'Alta',
+      status:'Em andamento',
+      inicio:'jan/26',
+      termino:'jun/26',
+      quarter:'Q2',
+      avanco:30,
+      historico:'abr/26 — Kick-off realizado. Próx: mapeamento de campos',
+      origem:'Priorizado'
     };
-    const rows=[
-      {nome:'Nome do Projeto',descricao:'Descrição da iniciativa (o que é e o que resolve)',beneficio:'Benefício esperado (ex: redução de retrabalho, conformidade)',tipo_projeto:'Melhoria contínua',area:'Benefícios',prioridade:'Alta',status:'Não iniciado',inicio:'jan/26',termino:'jun/26',quarter:'Q2',avanco:0,historico:'',origem:'Priorizado'},
-      {nome:'Outro Projeto Exemplo',descricao:'Descrição aqui',beneficio:'Benefício aqui',tipo_projeto:'Projeto Estruturante',area:'Atendimento',prioridade:'Média',status:'Em andamento',inicio:'mar/26',termino:'set/26',quarter:'Q3',avanco:40,historico:'abr/26 — Kick-off realizado',origem:'Priorizado'},
-      Object.fromEntries(cols.map(c=>[c,instrucoes[c]||'']))
-    ];
-    csvDownload('template-priorizados.csv', cols, rows);
-    toast('Template baixado!'); else {
-    // BASIC template — all fields including scoring criteria
-    const cols=[
-      'nome','descricao','beneficio','area','prioridade','origem',
-      'biz_risco','biz_cultura','biz_eficiencia','biz_experiencia','biz_talentos',
-      'ti_areas','ti_tempo','ti_complexidade'
-    ];
-    const instrucoes={
-      nome:'Nome da iniciativa',
-      descricao:'O que é e o que resolve',
-      beneficio:'Benefício esperado para o negócio',
-      area:'Ex: Benefícios, Remuneração, Admissão e Cadastro...',
-      prioridade:'Alta | Média | Baixa',
-      origem:'BASIC (fixo)',
-      biz_risco:'Riscos e Conformidade (peso 5) — notas: 0, 1, 3 ou 5',
-      biz_cultura:'Cultura, Liderança e Marca Empregadora (peso 4) — notas: 0, 1, 3 ou 5',
-      biz_eficiencia:'Eficiência e Desempenho Organizacional (peso 3) — notas: 0, 1, 3 ou 5',
-      biz_experiencia:'Experiência do Colaborador (peso 2) — notas: 0, 1, 3 ou 5',
-      biz_talentos:'Atração, Retenção e Desenvolvimento de Talentos (peso 1) — notas: 0, 1, 3 ou 5',
-      ti_areas:'Áreas Envolvidas: 5=Alto(0-3 áreas) | 3=Médio(3-5) | 1=Baixo(acima de 5) — preenchido por TI',
-      ti_tempo:'Tempo em Horas: 5=Alto(até 160h) | 3=Médio(160-480h) | 1=Baixo(acima 480h) — preenchido por TI',
-      ti_complexidade:'Complexidade: 5=Baixa | 3=Média | 1=Alta — preenchido por TI'
+    // Build CSV manually: first row = descriptive headers, second = example
+    const cell = v => {
+      const s = String(v??'').replace(/\r?\n|\r/g,' ').trim();
+      return (s.includes(';')||s.includes('"')) ? '"'+s.replace(/"/g,'""')+'"' : s;
     };
-    const rows=[
-      {nome:'Nome da Iniciativa BASIC',descricao:'Descrição da iniciativa',beneficio:'Benefício esperado',area:'Remuneração',prioridade:'Alta',origem:'BASIC',biz_risco:3,biz_cultura:1,biz_eficiencia:5,biz_experiencia:3,biz_talentos:1,ti_areas:'',ti_tempo:'',ti_complexidade:''},
-      {nome:'Outra Iniciativa BASIC',descricao:'Descrição aqui',beneficio:'Benefício aqui',area:'DHO',prioridade:'Média',origem:'BASIC',biz_risco:1,biz_cultura:3,biz_eficiencia:3,biz_experiencia:1,biz_talentos:5,ti_areas:'',ti_tempo:'',ti_complexidade:''},
-      Object.fromEntries(cols.map(c=>[c,instrucoes[c]||''])) // instruction row
+    const lines = [
+      headers.map(cell).join(';'),
+      cols.map(c=>cell(exemplo[c]??'')).join(';')
     ];
-    csvDownload('template-basic.csv', cols, rows);
+    const blob = new Blob(['\uFEFF'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='template-priorizados.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+
+  } else {
+    // BASIC template
+    const headers=[
+      'Nome da Iniciativa',
+      'Descrição (o que é e o que resolve)',
+      'Benefício Econômico ou Operacional',
+      'Área Solicitante',
+      'Prioridade (Alta | Média | Baixa)',
+      'Origem (fixo: BASIC)',
+      'Riscos e Conformidade — peso 5 (notas: 0, 1, 3 ou 5)',
+      'Cultura, Liderança e Marca Empregadora — peso 4 (notas: 0, 1, 3 ou 5)',
+      'Eficiência e Desempenho Organizacional — peso 3 (notas: 0, 1, 3 ou 5)',
+      'Experiência do Colaborador — peso 2 (notas: 0, 1, 3 ou 5)',
+      'Atração, Retenção e Desenvolvimento de Talentos — peso 1 (notas: 0, 1, 3 ou 5)',
+      'Áreas Envolvidas — TI (5=até 3 áreas | 3=3-5 áreas | 1=acima de 5)',
+      'Tempo Estimado — TI (5=até 160h | 3=160-480h | 1=acima de 480h)',
+      'Complexidade Técnica — TI (5=Baixa | 3=Média | 1=Alta)'
+    ];
+    const cols=['nome','descricao','beneficio','area','prioridade','origem','biz_risco','biz_cultura','biz_eficiencia','biz_experiencia','biz_talentos','ti_areas','ti_tempo','ti_complexidade'];
+    const exemplo={
+      nome:'## EXEMPLO — apague esta linha antes de importar',
+      descricao:'Automatizar o envio de cartas de remuneração via portal do colaborador',
+      beneficio:'Eliminar processo manual, reduzir erros e garantir rastreabilidade',
+      area:'Remuneração',
+      prioridade:'Alta',
+      origem:'BASIC',
+      biz_risco:3, biz_cultura:1, biz_eficiencia:5, biz_experiencia:3, biz_talentos:1,
+      ti_areas:'', ti_tempo:'', ti_complexidade:''
+    };
+    const cell = v => {
+      const s = String(v??'').replace(/\r?\n|\r/g,' ').trim();
+      return (s.includes(';')||s.includes('"')) ? '"'+s.replace(/"/g,'""')+'"' : s;
+    };
+    const lines = [
+      headers.map(cell).join(';'),
+      cols.map(c=>cell(exemplo[c]??'')).join(';')
+    ];
+    const blob = new Blob(['\uFEFF'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='template-basic.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }
   toast('Template baixado!');
 }
@@ -2029,8 +2073,34 @@ async function importCSV(event){
   // Auto-detect separator: semicolon or comma
   const sep = lines[0].includes(';') ? ';' : ',';
   const headers = lines[0].split(sep).map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  // Normalize headers: map descriptive labels to internal keys
+  const HEADER_MAP={
+    'nome da iniciativa':'nome',
+    'descrição (o que é e o que resolve)':'descricao',
+    'benefício econômico ou operacional':'beneficio',
+    'tipo (projeto estruturante | melhoria contínua)':'tipo_projeto',
+    'área solicitante':'area',
+    'prioridade (alta | média | baixa)':'prioridade',
+    'status (não iniciado | em andamento | concluído)':'status',
+    'início (ex: jan/26)':'inicio',
+    'término previsto (ex: jun/26)':'termino',
+    'quarter (q1 | q2 | q3 | q4 | tbd)':'quarter',
+    '% de avanço (0 a 100)':'avanco',
+    'histórico / últimas atualizações':'historico',
+    'origem (fixo: priorizado)':'origem',
+    'origem (fixo: basic)':'origem',
+    'riscos e conformidade — peso 5 (notas: 0, 1, 3 ou 5)':'biz_risco',
+    'cultura, liderança e marca empregadora — peso 4 (notas: 0, 1, 3 ou 5)':'biz_cultura',
+    'eficiência e desempenho organizacional — peso 3 (notas: 0, 1, 3 ou 5)':'biz_eficiencia',
+    'experiência do colaborador — peso 2 (notas: 0, 1, 3 ou 5)':'biz_experiencia',
+    'atração, retenção e desenvolvimento de talentos — peso 1 (notas: 0, 1, 3 ou 5)':'biz_talentos',
+    'áreas envolvidas — ti (5=até 3 áreas | 3=3-5 áreas | 1=acima de 5)':'ti_areas',
+    'tempo estimado — ti (5=até 160h | 3=160-480h | 1=acima de 480h)':'ti_tempo',
+    'complexidade técnica — ti (5=baixa | 3=média | 1=alta)':'ti_complexidade',
+  };
+  const normalizedHeaders = headers.map(h=>HEADER_MAP[h.toLowerCase()]||h);
   const getCol = (row, name) => {
-    const idx = headers.indexOf(name);
+    const idx = normalizedHeaders.indexOf(name);
     if(idx<0) return '';
     // Parse respecting quoted fields
     const parts=[];let cur='',inQ=false;
@@ -2046,9 +2116,9 @@ async function importCSV(event){
   for(let i=1;i<lines.length;i++){
     const row=lines[i];
     if(!row.trim()) continue;
-    const nome=getCol(row,'nome');
-    // Skip instruction rows (no valid nome or nome looks like a description)
-    if(!nome||nome.length>80||nome.startsWith('Nome do')||nome.startsWith('Outro')||nome.startsWith('O que')) { skipped++; continue; }
+    const nome=getCol(row,'nome')||getCol(row,'nome da iniciativa');
+    // Skip example rows marked with ##
+    if(!nome || nome.startsWith('##')){ skipped++; continue; }
     const tipo=getCol(row,'tipo')||getCol(row,'origem')||'Priorizado';
     const area=getCol(row,'area')||AREAS[0];
     if(tipo.toLowerCase()==='basic'){
@@ -2103,13 +2173,13 @@ loadAllData();
 document.addEventListener('click',function(e){const m=document.getElementById('emenu');if(m&&!e.target.closest('#emenu')&&!e.target.closest('[onclick*="emenu"]'))m.style.display='none';});
 
 
+
 document.addEventListener('click', function(e){
   const menu = document.getElementById('export-menu');
-  if(menu && !e.target.closest('[id="export-menu"]') && !e.target.closest('button[onclick*="export-menu"]')){
-    menu.style.display='none';
-  }
+  if(menu && !e.target.closest('[id="export-menu"]') && !e.target.closest('button[onclick*="export-menu"]'))menu.style.display='none';
+  const tmenu = document.getElementById('tmenu');
+  if(tmenu && !e.target.closest('[id="tmenu"]') && !e.target.closest('button[onclick*="tmenu"]'))tmenu.style.display='none';
 });
-
 </script>
 </body>
 </html>
