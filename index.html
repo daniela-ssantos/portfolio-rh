@@ -330,7 +330,7 @@ tr:hover td{background:#fdf5f8;}
         <button onclick="downloadTemplate('basic');document.getElementById('tmenu').style.display='none'" style="width:100%;padding:9px 14px;font-size:11px;font-family:inherit;background:transparent;border:none;cursor:pointer;text-align:left;color:#333;">📄 Pipeline BASIC</button>
       </div>
     </div>
-    <label style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo-luz);border:1px solid var(--bordo-luz);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↑ Importar<input type="file" accept=".csv" style="display:none" onchange="importCSV(event)"></label>
+    <label style="padding:6px 12px;font-size:11px;font-weight:500;font-family:inherit;background:transparent;color:var(--bordo-luz);border:1px solid var(--bordo-luz);border-radius:var(--r);cursor:pointer;white-space:nowrap;">↑ Importar<input type="file" accept=".csv" style="display:none" onchange="showImportPreview(event)"></label>
   </div>
   <div class="twrap">
     <table>
@@ -2062,109 +2062,166 @@ function exportCSV(){
   toast('Exportado com sucesso.');
 }
 
-async function importCSV(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  // Strip BOM if present
-  let text = await file.text();
-  text = text.replace(/^\uFEFF/,'');
-  const lines = text.split(/\r?\n/).filter(l=>l.trim());
-  if(lines.length < 2){ toast('Arquivo vazio ou inválido.'); return; }
-  // Auto-detect separator: semicolon or comma
-  const sep = lines[0].includes(';') ? ';' : ',';
-  const headers = lines[0].split(sep).map(h=>h.replace(/"/g,'').trim().toLowerCase());
-  // Normalize headers: map descriptive labels to internal keys
-  const HEADER_MAP={
-    'nome da iniciativa':'nome',
-    'descrição (o que é e o que resolve)':'descricao',
-    'benefício econômico ou operacional':'beneficio',
-    'tipo (projeto estruturante | melhoria contínua)':'tipo_projeto',
-    'área solicitante':'area',
-    'prioridade (alta | média | baixa)':'prioridade',
-    'status (não iniciado | em andamento | concluído)':'status',
-    'início (ex: jan/26)':'inicio',
-    'término previsto (ex: jun/26)':'termino',
-    'quarter (q1 | q2 | q3 | q4 | tbd)':'quarter',
-    '% de avanço (0 a 100)':'avanco',
-    'histórico / últimas atualizações':'historico',
-    'origem (fixo: priorizado)':'origem',
-    'origem (fixo: basic)':'origem',
-    'riscos e conformidade — peso 5 (notas: 0, 1, 3 ou 5)':'biz_risco',
-    'cultura, liderança e marca empregadora — peso 4 (notas: 0, 1, 3 ou 5)':'biz_cultura',
-    'eficiência e desempenho organizacional — peso 3 (notas: 0, 1, 3 ou 5)':'biz_eficiencia',
-    'experiência do colaborador — peso 2 (notas: 0, 1, 3 ou 5)':'biz_experiencia',
-    'atração, retenção e desenvolvimento de talentos — peso 1 (notas: 0, 1, 3 ou 5)':'biz_talentos',
-    'áreas envolvidas — ti (5=até 3 áreas | 3=3-5 áreas | 1=acima de 5)':'ti_areas',
-    'tempo estimado — ti (5=até 160h | 3=160-480h | 1=acima de 480h)':'ti_tempo',
-    'complexidade técnica — ti (5=baixa | 3=média | 1=alta)':'ti_complexidade',
-  };
-  const normalizedHeaders = headers.map(h=>HEADER_MAP[h.toLowerCase()]||h);
-  const getCol = (row, name) => {
-    const idx = normalizedHeaders.indexOf(name);
-    if(idx<0) return '';
-    // Parse respecting quoted fields
-    const parts=[];let cur='',inQ=false;
-    for(const ch of row+sep){
-      if(ch==='"'){inQ=!inQ;}
-      else if(ch===sep&&!inQ){parts.push(cur.replace(/^"|"$/g,'').replace(/""/g,'"').trim());cur='';}
-      else cur+=ch;
-    }
-    return parts[idx]||'';
-  };
-  const getNum = (row,name) => { const v=parseInt(getCol(row,name)); return isNaN(v)?0:v; };
-  let added=0, updated=0, skipped=0;
-  for(let i=1;i<lines.length;i++){
-    const row=lines[i];
-    if(!row.trim()) continue;
-    const nome=getCol(row,'nome')||getCol(row,'nome da iniciativa');
-    // Skip example rows marked with ##
-    if(!nome || nome.startsWith('##')){ skipped++; continue; }
-    const tipo=getCol(row,'tipo')||getCol(row,'origem')||'Priorizado';
-    const area=getCol(row,'area')||AREAS[0];
-    if(tipo.toLowerCase()==='basic'){
-      const bizScores={
-        risco:getNum(row,'biz_risco'), cultura:getNum(row,'biz_cultura'),
-        eficiencia:getNum(row,'biz_eficiencia'), experiencia:getNum(row,'biz_experiencia'),
-        talentos:getNum(row,'biz_talentos')
-      };
-      const tiRaw={areas:getNum(row,'ti_areas'),tempo:getNum(row,'ti_tempo'),complexidade:getNum(row,'ti_complexidade')};
-      const tiScores=Object.values(tiRaw).some(v=>v>0)?tiRaw:{};
-      const bData={nome,desc:getCol(row,'descricao'),benef:getCol(row,'beneficio'),area,prio:getCol(row,'prioridade')||'Média',bizScores,tiScores};
-      const existing=basicItems.find(b=>b.nome===nome);
-      if(existing){
-        Object.assign(existing,bData);
-        await saveBasicToDB(bData,existing.id);
-        updated++;
-      } else {
-        const newId=await saveBasicToDB(bData,null);
-        basicItems.push({id:newId||nextId++,...bData,_q:null});
-        added++;
-      }
+// ── CSV PARSER (RFC 4180 compliant — handles multiline quoted fields) ────────
+function parseCSV(text, sep=';'){
+  const rows=[];let r=[],field='',inQ=false,i=0;
+  const n=text.length;
+  while(i<n){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'&&text[i+1]==='"'){field+='"';i+=2;}
+      else if(ch==='"'){inQ=false;i++;}
+      else{field+=ch;i++;}
     } else {
-      const data={
-        nome, desc:getCol(row,'descricao'), benef:getCol(row,'beneficio'),
-        tipo:getCol(row,'tipo_projeto')||'Melhoria contínua', area,
-        prio:getCol(row,'prioridade')||'Média', status:getCol(row,'status')||'Não iniciado',
-        inicio:getCol(row,'inicio')||'', end:getCol(row,'termino')||'',
-        q:getCol(row,'quarter')||'TBD', avanco:getNum(row,'avanco'),
-        historico:getCol(row,'historico')||'', origem:'priorizado'
-      };
-      const existing=projects.find(p=>p.nome===nome);
-      if(existing){
-        Object.assign(existing,data);
-        await saveProjetoToDB(data,existing.id);
-        updated++;
-      } else {
-        const newId=await saveProjetoToDB(data,null);
-        projects.push({id:newId||nextId++,...data});
-        added++;
-      }
+      if(ch==='"'){inQ=true;i++;}
+      else if(ch===sep){r.push(field.trim());field='';i++;}
+      else if(ch==='\r'&&text[i+1]==='\n'){r.push(field.trim());rows.push(r);r=[];field='';i+=2;}
+      else if(ch==='\n'||ch==='\r'){r.push(field.trim());rows.push(r);r=[];field='';i++;}
+      else{field+=ch;i++;}
     }
   }
-  event.target.value='';
-  renderAll();
-  toast(`Importados: ${added} novos | ${updated} atualizados | ${skipped} ignorados`);
+  if(field||r.length){r.push(field.trim());rows.push(r);}
+  return rows.filter(r=>r.some(c=>c));
 }
+
+// ── IMPORT PREVIEW MODAL ──────────────────────────────────
+let _importParsed=null;
+
+function showImportPreview(event){
+  const file=event.target.files[0];
+  if(!file){return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let text=e.target.result.replace(/^\uFEFF/,'');
+    const sep=text.split('\n')[0].includes(';')?';':',';
+    const allRows=parseCSV(text,sep);
+    if(allRows.length<2){toast('Arquivo vazio ou inválido.');return;}
+    const HMAP={
+      'nome da iniciativa':'nome','nome':'nome',
+      'descrição (o que é e o que resolve)':'descricao','descricao':'descricao',
+      'benefício econômico ou operacional':'beneficio','beneficio':'beneficio',
+      'tipo (projeto estruturante | melhoria contínua)':'tipo_projeto','tipo_projeto':'tipo_projeto',
+      'área solicitante':'area','area':'area',
+      'prioridade (alta | média | baixa)':'prioridade','prioridade':'prioridade',
+      'status (não iniciado | em andamento | concluído)':'status','status':'status',
+      'início (ex: jan/26)':'inicio','inicio':'inicio',
+      'término previsto (ex: jun/26)':'termino','termino':'termino',
+      'quarter (q1 | q2 | q3 | q4 | tbd)':'quarter','quarter':'quarter',
+      '% de avanço (0 a 100)':'avanco','avanco':'avanco',
+      'histórico / últimas atualizações':'historico','historico':'historico',
+      'origem (fixo: priorizado)':'origem','origem (fixo: basic)':'origem','origem':'origem',
+      'riscos e conformidade — peso 5 (notas: 0, 1, 3 ou 5)':'biz_risco','biz_risco':'biz_risco',
+      'cultura, liderança e marca empregadora — peso 4 (notas: 0, 1, 3 ou 5)':'biz_cultura','biz_cultura':'biz_cultura',
+      'eficiência e desempenho organizacional — peso 3 (notas: 0, 1, 3 ou 5)':'biz_eficiencia','biz_eficiencia':'biz_eficiencia',
+      'experiência do colaborador — peso 2 (notas: 0, 1, 3 ou 5)':'biz_experiencia','biz_experiencia':'biz_experiencia',
+      'atração, retenção e desenvolvimento de talentos — peso 1 (notas: 0, 1, 3 ou 5)':'biz_talentos','biz_talentos':'biz_talentos',
+      'áreas envolvidas — ti (5=até 3 áreas | 3=3-5 áreas | 1=acima de 5)':'ti_areas','ti_areas':'ti_areas',
+      'tempo estimado — ti (5=até 160h | 3=160-480h | 1=acima de 480h)':'ti_tempo','ti_tempo':'ti_tempo',
+      'complexidade técnica — ti (5=baixa | 3=média | 1=alta)':'ti_complexidade','ti_complexidade':'ti_complexidade',
+    };
+    const hdrs=allRows[0].map(h=>HMAP[h.toLowerCase()]||h.toLowerCase());
+    const get=(row,key)=>{const i=hdrs.indexOf(key);return i>=0?(row[i]||'').trim():'';};
+    const dataRows=allRows.slice(1).filter(r=>{
+      const nm=(r[hdrs.indexOf('nome')]||r[0]||'').trim();
+      return nm&&!nm.startsWith('##')&&nm!=='Nome da Iniciativa';
+    });
+    const toAdd=[],toUpdate=[];
+    for(const row of dataRows){
+      const nome=get(row,'nome');if(!nome)continue;
+      const orig=(get(row,'origem')||'priorizado').toLowerCase();
+      if(orig==='basic'){
+        const ex=basicItems.find(b=>b.nome.trim().toLowerCase()===nome.toLowerCase());
+        ex?toUpdate.push({tipo:'basic',row,existing:ex}):toAdd.push({tipo:'basic',row,nome});
+      } else {
+        const ex=projects.find(p=>p.nome.trim().toLowerCase()===nome.toLowerCase());
+        ex?toUpdate.push({tipo:'priorizado',row,existing:ex}):toAdd.push({tipo:'priorizado',row,nome});
+      }
+    }
+    _importParsed={hdrs,get,toAdd,toUpdate};
+    const preview=[...toAdd,...toUpdate].slice(0,10).map(item=>{
+      const nm=item.nome||item.existing?.nome;
+      const tag=item.existing
+        ?`<span style="font-size:10px;background:#e8f4ee;color:#1E7A4A;padding:1px 7px;border-radius:8px;margin-left:6px;">atualizar</span>`
+        :`<span style="font-size:10px;background:#e8eef8;color:#1a3a6e;padding:1px 7px;border-radius:8px;margin-left:6px;">novo</span>`;
+      return `<div style="padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:12px;display:flex;align-items:center;">${nm}${tag}</div>`;
+    }).join('');
+    const more=toAdd.length+toUpdate.length-10;
+    document.getElementById('import-modal').innerHTML=`
+      <div style="background:#fff;border-radius:12px;padding:24px;width:500px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+        <h3 style="margin:0 0 4px;font-size:15px;color:var(--bordo);">📂 Prévia da importação</h3>
+        <p style="font-size:12px;color:var(--text3);margin:0 0 16px;">${file.name}</p>
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <div style="flex:1;background:#e8f4ee;border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:22px;font-weight:700;color:#1E7A4A;">${toAdd.length}</div>
+            <div style="font-size:11px;color:#1E7A4A;">novos</div>
+          </div>
+          <div style="flex:1;background:#fff8e1;border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:22px;font-weight:700;color:#C47D00;">${toUpdate.length}</div>
+            <div style="font-size:11px;color:#C47D00;">a atualizar</div>
+          </div>
+        </div>
+        <div style="border:1px solid #eee;border-radius:8px;padding:8px 12px;max-height:220px;overflow-y:auto;margin-bottom:12px;">
+          ${preview}
+          ${more>0?`<div style="font-size:11px;color:var(--text3);padding:6px 0;">...e mais ${more} projetos</div>`:''}
+        </div>
+        <div style="background:#fff8e1;border-radius:8px;padding:10px 14px;font-size:12px;color:#7a5000;margin-bottom:16px;">
+          ⚠️ Projetos existentes com o mesmo nome serão <strong>atualizados</strong> com os dados do arquivo.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="closeImportModal()" style="padding:8px 18px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;">Cancelar</button>
+          <button id="btn-confirm-import" onclick="executeImport()" style="padding:8px 22px;background:var(--magenta);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;">Confirmar importação</button>
+        </div>
+      </div>`;
+    document.getElementById('import-modal').style.display='flex';
+  };
+  reader.readAsText(file,'utf-8');
+  event.target.value='';
+}
+
+function closeImportModal(){
+  document.getElementById('import-modal').style.display='none';
+  _importParsed=null;
+}
+
+async function executeImport(){
+  if(!_importParsed)return;
+  const {hdrs,get,toAdd,toUpdate}=_importParsed;
+  const btn=document.getElementById('btn-confirm-import');
+  if(btn){btn.textContent='Importando...';btn.disabled=true;}
+  let added=0,updated=0,errors=0;
+  for(const item of [...toUpdate,...toAdd]){
+    try{
+      const row=item.row;
+      const nome=get(row,'nome');
+      const orig=(get(row,'origem')||'priorizado').toLowerCase();
+      if(orig==='basic'){
+        const bData={nome,desc:get(row,'descricao'),benef:get(row,'beneficio'),
+          area:get(row,'area')||AREAS[0],prio:get(row,'prioridade')||'Média',
+          bizScores:{risco:parseInt(get(row,'biz_risco'))||0,cultura:parseInt(get(row,'biz_cultura'))||0,
+            eficiencia:parseInt(get(row,'biz_eficiencia'))||0,experiencia:parseInt(get(row,'biz_experiencia'))||0,
+            talentos:parseInt(get(row,'biz_talentos'))||0},
+          tiScores:{areas:parseInt(get(row,'ti_areas'))||0,tempo:parseInt(get(row,'ti_tempo'))||0,
+            complexidade:parseInt(get(row,'ti_complexidade'))||0}};
+        if(item.existing){Object.assign(item.existing,bData);await saveBasicToDB(bData,item.existing.id);updated++;}
+        else{const nid=await saveBasicToDB(bData,null);basicItems.push({id:nid||nextId++,...bData,_q:null});added++;}
+      } else {
+        const data={nome,desc:get(row,'descricao'),benef:get(row,'beneficio'),
+          tipo:get(row,'tipo_projeto')||'Melhoria contínua',area:get(row,'area')||AREAS[0],
+          prio:get(row,'prioridade')||'Média',status:get(row,'status')||'Não iniciado',
+          inicio:get(row,'inicio')||'',end:get(row,'termino')||'',
+          q:get(row,'quarter')||'TBD',avanco:parseInt(get(row,'avanco'))||0,
+          historico:get(row,'historico')||'',origem:'priorizado'};
+        if(item.existing){Object.assign(item.existing,data);await saveProjetoToDB(data,item.existing.id);updated++;}
+        else{const nid=await saveProjetoToDB(data,null);projects.push({id:nid||nextId++,...data});added++;}
+      }
+    }catch(err){console.error('Import err:',err);errors++;}
+  }
+  closeImportModal();
+  renderAll();
+  toast(`✅ ${added} adicionados · ${updated} atualizados${errors>0?' · ⚠️ '+errors+' erros':''}`);
+}
+
+async function importCSV(event){showImportPreview(event);}
 
 function renderAll(){renderMetrics();renderProjetos();renderKanban();renderCarga();renderBasic();renderPrio();document.getElementById('last-update').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 }
@@ -2181,5 +2238,6 @@ document.addEventListener('click', function(e){
   if(tmenu && !e.target.closest('[id="tmenu"]') && !e.target.closest('button[onclick*="tmenu"]'))tmenu.style.display='none';
 });
 </script>
+<div id="import-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;"></div>
 </body>
 </html>
