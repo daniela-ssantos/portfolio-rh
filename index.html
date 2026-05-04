@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · 2026 · v21</title>
+<title>Portfólio RH · 2026 · v22</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -262,7 +262,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v21</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v22</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -579,7 +579,7 @@ tr:hover td{background:#fdf5f8;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ==================================================
-// ARQUITETURA TÉCNICA — PORTFÓLIO RH (v21)
+// ARQUITETURA TÉCNICA — PORTFÓLIO RH (v22)
 // Blocos lógicos (ordem conceitual):
 // 1. Business Rules (Governança)
 // 2. State Manager
@@ -752,6 +752,28 @@ function calcTIScore(s){
   const max=filled.reduce((t,c)=>t+c.peso*5,0);
   const got=filled.reduce((t,c)=>t+c.peso*(s[c.id]||0),0);
   return max>0?Math.round((got/max)*50):0;
+}
+
+// ── PERCENTIL-BASED CLASSIFICATION (I / II / III) ───────────────
+function percentile(values, p){
+  const v=[...values].sort((a,b)=>a-b);
+  if(!v.length) return null;
+  const idx = Math.ceil(p/100 * v.length) - 1;
+  return v[Math.max(0, Math.min(idx, v.length-1))];
+}
+
+function classifyI_II_III(items){
+  const bizVals = items.map(i=>i.biz).filter(v=>v!=null);
+  const tiVals  = items.map(i=>i.ti ).filter(v=>v!=null);
+  const bizHigh = percentile(bizVals, 70); // top 30%
+  const tiEasy  = percentile(tiVals, 50); // median as 'easy'
+
+  return items.map(i=>{
+    let cls='III', label='III – Postergável';
+    if(i.biz>=bizHigh && i.ti>=tiEasy){ cls='I'; label='I – Crítico'; }
+    else if(i.biz>=bizHigh || (i.biz<bizHigh && i.ti>=tiEasy)){ cls='II'; label='II – Importante'; }
+    return {...i, cls, clsLabel:label};
+  });
 }
 function calcTotal(biz,ti,wB){return ti!=null?Math.round(biz*(wB/100)+ti*((100-wB)/100)):null;}
 function getQuad(biz,ti){
@@ -1194,12 +1216,27 @@ function syncW(from){
   renderPrio();renderBasic();
 }
 const QUAD_ORDER=['Priorizar','Planejar','Avaliar','Diferir','Aguarda TI'];
+
 function renderPrio(){
-  const wB=+(document.getElementById('wB')?.value||50);
-  const scored=basicItems.map(b=>{
-    const biz=calcBizScore(b.bizScores);
-    const ti=calcTIScore(b.tiScores);
-    return{...b,biz,ti,score:calcTotal(biz,ti,wB),quad:getQuad(biz,ti)};
+  const wB = +(document.getElementById('wB')?.value||50);
+  let items = basicItems.map(b=>{
+    const biz = calcBizScore(b.bizScores);
+    const ti  = calcTIScore(b.tiScores);
+    return {...b, biz, ti, score: calcTotal(biz,ti,wB)};
+  }).filter(b=>b.ti!=null);
+
+  items = classifyI_II_III(items)
+    .sort((a,b)=> ({'I':0,'II':1,'III':2}[a.cls] - {'I':0,'II':1,'III':2}[b.cls]) || (b.score-a.score));
+
+  document.getElementById('prank').innerHTML = items.map((b,i)=>`
+    <div class="rr">
+      <span class="rn">${i+1}</span>
+      <span class="rname">${b.nome}</span>
+      <span class="qb">${b.clsLabel}</span>
+      <span class="rs">${b.score??'—'}</span>
+    </div>`).join('');
+}
+;
   }).sort((a,b)=>{
     const oi=QUAD_ORDER.indexOf(a.quad.l),oj=QUAD_ORDER.indexOf(b.quad.l);
     if(oi!==oj)return oi-oj;
