@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · 2026 · v21</title>
+<title>Portfólio RH · 2026 · v22</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -262,7 +262,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v21</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v22</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -579,7 +579,7 @@ tr:hover td{background:#fdf5f8;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ==================================================
-// ARQUITETURA TÉCNICA — PORTFÓLIO RH (v21)
+// ARQUITETURA TÉCNICA — PORTFÓLIO RH (v22)
 // Blocos lógicos (ordem conceitual):
 // 1. Business Rules (Governança)
 // 2. State Manager
@@ -1235,44 +1235,6 @@ function renderPrio(){
       <span class="qb">${b.clsLabel}</span>
       <span class="rs">${b.score??'—'}</span>
     </div>`).join('');
-}
-;
-  }).sort((a,b)=>{
-    const oi=QUAD_ORDER.indexOf(a.quad.l),oj=QUAD_ORDER.indexOf(b.quad.l);
-    if(oi!==oj)return oi-oj;
-    return (b.score||0)-(a.score||0);
-  });
-  document.getElementById('prank').innerHTML=scored.map((b,i)=>`
-    <div class="rr">
-      <span class="rn">${i+1}</span>
-      <span class="rname">${b.nome}</span>
-      <span class="qb ${b.quad.c}" style="background:${b.quad.col}22;color:${b.quad.col}">${b.quad.l}</span>
-      <span class="rs">${b.score??'—'}</span>
-    </div>`).join('');
-  const cMap={Priorizar:'#1D9E75',Planejar:'#2E101E',Avaliar:'#BF144A',Diferir:'#9E9E9E'};
-  const datasets=Object.keys(cMap).map(ql=>({
-    label:ql,
-    data:scored.filter(b=>b.quad.l===ql&&b.ti!=null).map(b=>({x:b.biz,y:b.ti,name:b.nome,score:b.score})),
-    backgroundColor:cMap[ql]+'99',borderColor:cMap[ql],borderWidth:1.5,pointRadius:7,pointHoverRadius:9,
-  }));
-  if(scatterChart){scatterChart.data.datasets=datasets;scatterChart.update();return;}
-  scatterChart=new Chart(document.getElementById('scatter'),{type:'scatter',data:{datasets},options:{
-    responsive:true,maintainAspectRatio:false,layout:{padding:12},
-    plugins:{
-      legend:{display:false},
-      tooltip:{callbacks:{label:ctx=>{const d=ctx.raw;return[d.name,`Neg: ${d.x} · TI: ${d.y}`,`Score: ${d.score}`];}}},
-      annotation:{
-        annotations:{
-          hLine:{type:'line',yMin:25,yMax:25,borderColor:'rgba(0,0,0,.18)',borderWidth:1,borderDash:[4,4]},
-          vLine:{type:'line',xMin:25,xMax:25,borderColor:'rgba(0,0,0,.18)',borderWidth:1,borderDash:[4,4]}
-        }
-      }
-    },
-    scales:{
-      x:{title:{display:true,text:'Score negócio →',font:{size:11},color:'#888'},min:0,max:52,ticks:{font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,.05)'}},
-      y:{title:{display:true,text:'Score TI (facilidade) →',font:{size:11},color:'#888'},min:0,max:52,ticks:{font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,.05)'}}
-    }
-  }});
 }
 
 // ── FORM ──────────────────────────────────────────────────
