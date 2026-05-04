@@ -2251,6 +2251,86 @@ document.addEventListener('click', function(e){
   const tmenu = document.getElementById('tmenu');
   if(tmenu && !e.target.closest('[id="tmenu"]') && !e.target.closest('button[onclick*="tmenu"]'))tmenu.style.display='none';
 });
+
+// ==================================================
+// BUSINESS RULES — GOVERNANÇA PORTFÓLIO RH
+// ==================================================
+
+function calcScoreNegocio(item) {
+  const criterios = [
+    item.riscosConformidade,
+    item.culturaMarca,
+    item.eficienciaOrganizacional,
+    item.experienciaColaborador,
+    item.atracaoRetencao
+  ];
+  return criterios.reduce((soma, v) => soma + Number(v || 0), 0);
+}
+
+function calcScoreTI(item) {
+  const criterios = [
+    item.complexidadeTecnica,
+    item.tempoEstimado,
+    item.qtdAreasEnvolvidas
+  ];
+  return criterios.reduce((soma, v) => soma + Number(v || 0), 0);
+}
+
+function calcScoreTotal(item, pesos) {
+  const scoreNegocio = calcScoreNegocio(item);
+  const scoreTI = calcScoreTI(item);
+
+  const pesoNegocio = pesos.negocio / 100;
+  const pesoTI = pesos.ti / 100;
+
+  return (scoreNegocio * pesoNegocio) - (scoreTI * pesoTI);
+}
+
+function definirQuadrante(scoreNegocio, scoreTI) {
+  const LIMIAR_NEGOCIO = 10;
+  const LIMIAR_TI = 6;
+
+  if (scoreNegocio >= LIMIAR_NEGOCIO && scoreTI <= LIMIAR_TI) {
+    return "Priorizar";
+  }
+  if (scoreNegocio >= LIMIAR_NEGOCIO && scoreTI > LIMIAR_TI) {
+    return "Planejar";
+  }
+  if (scoreNegocio < LIMIAR_NEGOCIO && scoreTI <= LIMIAR_TI) {
+    return "Avaliar";
+  }
+  return "Diferir";
+}
+
+function calcularFarolPrazo(prazo, percentualConcluido) {
+  if (!prazo) return "Sem prazo";
+
+  const hoje = new Date();
+  const dataPrazo = new Date(prazo);
+
+  if (percentualConcluido >= 100) return "Concluído";
+  if (hoje > dataPrazo) return "Atrasado";
+
+  const diasRestantes = (dataPrazo - hoje) / (1000 * 60 * 60 * 24);
+
+  if (diasRestantes <= 15 && percentualConcluido < 70) {
+    return "Em risco";
+  }
+
+  return "No prazo";
+}
+
+function calcularQuarterAutomatico(dataInicio) {
+  if (!dataInicio) return null;
+
+  const mes = new Date(dataInicio).getMonth() + 1;
+
+  if (mes <= 3) return "Q1";
+  if (mes <= 6) return "Q2";
+  if (mes <= 9) return "Q3";
+  return "Q4";
+}
+``
 </script>
 <div id="import-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;"></div>
 </body>
