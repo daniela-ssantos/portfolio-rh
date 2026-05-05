@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · 2026 · v22</title>
+<title>Portfólio RH · 2026 · v23</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -256,13 +256,18 @@ tr:hover td{background:#fdf5f8;}
 #tbs td { vertical-align:top; }
 #tbs tr:hover { background:#f5f0f8 !important; }
 
+
+.qb.i{background:#2D101E;color:#fff;font-weight:600;}
+.qb.ii{background:#661F46;color:#fff;font-weight:500;}
+.qb.iii{background:#BE1349;color:#fff;opacity:.85;}
+
 </style>
   </head>
 <body>
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v22</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -416,12 +421,10 @@ tr:hover td{background:#fdf5f8;}
   <div class="cc full">
     <h3>Volume por área · distribuição por quarter (priorizados + BASIC)</h3>
     <div class="legrow">
-      <span class="leg"><span class="lsw" style="background:#2E101E"></span>Q1</span>
-      <span class="leg"><span class="lsw" style="background:#662046"></span>Q2</span>
-      <span class="leg"><span class="lsw" style="background:#BF144A"></span>Q3</span>
-      <span class="leg"><span class="lsw" style="background:#FF7DAF"></span>Q4</span>
-      <span class="leg"><span class="lsw" style="background:#D9D9D9"></span>Não definido</span>
-    </div>
+  <span class="leg"><span class="lsw" style="background:#2D101E;border-radius:50%"></span>I – Crítico</span>
+  <span class="leg"><span class="lsw" style="background:#661F46;border-radius:50%"></span>II – Importante</span>
+  <span class="leg"><span class="lsw" style="background:#BE1349;border-radius:50%"></span>III – Postergável</span>
+</div>
     <div id="ch-area"></div>
   </div>
 </div>
@@ -471,7 +474,7 @@ tr:hover td{background:#fdf5f8;}
     <div class="ctrl"><span>Peso TI</span><input type="range" id="wT" min="0" max="100" value="50" step="1" oninput="syncW('t')"><span class="cv" id="wTv">50%</span></div>
   </div>
   <div class="pg">
-    <div class="cc"><h3>Ranking · Priorizar → Planejar → Avaliar → Diferir</h3><div id="prank"></div></div>
+    <div class="cc"><h3>Ranking · I – Crítico → II – Importante → III – Postergável</h3><div id="prank"></div></div>
     <div class="cc">
       <h3>Matriz valor negócio × complexidade TI</h3>
       <div class="legrow">
@@ -579,7 +582,7 @@ tr:hover td{background:#fdf5f8;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ==================================================
-// ARQUITETURA TÉCNICA — PORTFÓLIO RH (v22)
+// ARQUITETURA TÉCNICA — PORTFÓLIO RH (v23)
 // Blocos lógicos (ordem conceitual):
 // 1. Business Rules (Governança)
 // 2. State Manager
@@ -831,6 +834,7 @@ let basicItems=[
   {id:113,nome:'Workverse - admissões nas HRRs',desc:'',benef:'',area:'Admissão e Cadastro',prio:'Alta',bizScores:{risco:3,cultura:3,eficiencia:5,experiencia:5,talentos:3},tiScores:{areas:5,tempo:5,complexidade:5}},
 ];
 let nextId=200;
+const statusSet = new Set();
 // multi-select filter sets
 const fSets={q:new Set(),t:new Set(),o:new Set()};
 
@@ -1228,6 +1232,7 @@ function renderPrio(){
   items = classifyI_II_III(items)
     .sort((a,b)=> ({'I':0,'II':1,'III':2}[a.cls] - {'I':0,'II':1,'III':2}[b.cls]) || (b.score-a.score));
 
+  renderPrioMatrix(items);
   document.getElementById('prank').innerHTML = items.map((b,i)=>`
     <div class="rr">
       <span class="rn">${i+1}</span>
@@ -1235,6 +1240,21 @@ function renderPrio(){
       <span class="qb">${b.clsLabel}</span>
       <span class="rs">${b.score??'—'}</span>
     </div>`).join('');
+}
+
+
+function renderPrioMatrix(items){
+  const c=document.getElementById('scatter'); if(!c) return;
+  const ctx=c.getContext('2d');
+  if(scatterChart) scatterChart.destroy();
+  scatterChart=new Chart(ctx,{
+    type:'scatter',
+    data:{datasets:['I','II','III'].map(cls=>({
+      label:cls,
+      data:items.filter(i=>i.cls===cls).map(i=>({x:i.ti,y:i.biz})),
+      backgroundColor:cls==='I'?'#2D101E':cls==='II'?'#661F46':'#BE1349'}))},
+    options:{plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Complexidade TI'}},y:{title:{display:true,text:'Valor de Negócio'}}}}
+  });
 }
 
 // ── FORM ──────────────────────────────────────────────────
