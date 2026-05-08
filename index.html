@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · 2026 · v23.2</title>
+<title>Portfólio RH · 2026 · v23.3_AJUSTADO</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -267,7 +267,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.2</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.3_AJUSTADO</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -972,7 +972,7 @@ function renderTable(rows,groupByArea){
       <td>${tipoBadge(p)}</td>
       <td style="color:var(--text2);font-size:11px">${p.area}</td>
       <td style="font-size:11px">
-        <div style="display:flex;align-items:center;gap:5px;"><span class="dot" style="background:${STATUS_COLOR[p.status] || '#BDBDBD'}"></span>${p.status}</div>
+        <div style="display:flex;align-items:center;gap:5px;">${p.status==='Concluído'?'✅ Concluído':(`<span class=\"dot\" style=\"background:${STATUS_COLOR[p.status] || '#BDBDBD'}\"></span>${p.status}`)}</div>
       </td>
       <td style="color:var(--text2);font-size:11px">${p.end}</td>
       <td style="font-size:11px;min-width:100px;">
