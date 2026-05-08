@@ -267,7 +267,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.3_AJUSTADO</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.3</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -403,6 +403,22 @@ tr:hover td{background:#fdf5f8;}
       <button class="fbtn" data-vq="TBD" onclick="toggleVF('q','TBD',this)">Não def.</button>
     </div>
     <div class="tsep"></div>
+    <span class="flbl">Status</span>
+    <select id="v-filtro-status" onchange="renderCarga()" style="padding:5px 10px;font-size:11px;border:1px solid #ddd;border-radius:6px;font-family:inherit;">
+      <option value="">Todos</option>
+      <option value="Em andamento">Em andamento</option>
+      <option value="Não iniciado">Não iniciado</option>
+      <option value="Stand-by">Stand-by</option>
+      <option value="Concluído">Concluído</option>
+    </select>
+    <div class="tsep"></div>
+    <span class="flbl">Origem</span>
+    <select id="v-filtro-origem" onchange="renderCarga()" style="padding:5px 10px;font-size:11px;border:1px solid #ddd;border-radius:6px;font-family:inherit;">
+      <option value="">Todos</option>
+      <option value="priorizado">Priorizados</option>
+      <option value="basic">Pipeline BASIC</option>
+    </select>
+    <div class="tsep"></div>
     <span class="flbl">Área</span>
     <div class="mdd-wrap">
       <button class="fbtn mdd-btn" id="mdd-btn-v" onclick="openMDD('v')">Todas ▾</button>
@@ -440,16 +456,19 @@ tr:hover td{background:#fdf5f8;}
         <option value="">Todos os status</option>
         <option value="Em andamento">Em andamento</option>
         <option value="Não iniciado">Não iniciado</option>
+        <option value="Stand-by">Stand-by</option>
         <option value="Concluído">Concluído</option>
       </select>
       <select id="saude-filtro-farol" onchange="renderSaude()" style="padding:5px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
         <option value="">Todos os farois</option>
         <option value="Atrasado">🔴 Atrasado</option>
-        <option value="Em risco">🔴 Em risco</option>
-        <option value="Atenção">🟡 Atenção</option>
+        <option value="Em risco">🟠 Em risco</option>
         <option value="No prazo">🟢 No prazo</option>
         <option value="Concluído">✅ Concluído</option>
         <option value="Sem prazo">⚪ Sem prazo</option>
+      </select>
+      <select id="saude-filtro-area" onchange="renderSaude()" style="padding:5px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
+        <option value="">Todas as áreas</option>
       </select>
     </div>
     <div style="display:flex;gap:16px;font-size:11px;color:#666;" id="saude-alertas"></div>
@@ -470,6 +489,67 @@ tr:hover td{background:#fdf5f8;}
       </thead>
       <tbody id="tbody-saude"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- ABA PIPELINE BASIC -->
+<div class="sec" id="tab-basico">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <input id="sb" type="text" placeholder="Buscar iniciativa..." oninput="renderBasic()" style="padding:7px 12px;font-size:12px;border:1px solid #ddd;border-radius:8px;width:200px;font-family:inherit;">
+      <select id="b-filtro-area" onchange="renderBasic()" style="padding:6px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
+        <option value="">Todas as áreas</option>
+      </select>
+      <select id="b-filtro-prio" onchange="renderBasic()" style="padding:6px 10px;font-size:11px;border:1px solid #e0e0e0;border-radius:6px;font-family:inherit;">
+        <option value="">Todas as prioridades</option>
+        <option value="Alta">Alta</option>
+        <option value="Média">Média</option>
+        <option value="Baixa">Baixa</option>
+      </select>
+    </div>
+    <button onclick="openBasicModal(null)" style="padding:7px 16px;background:var(--magenta);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;">+ Nova Iniciativa</button>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:var(--bordo);color:#fff;">
+          <th style="padding:10px 12px;text-align:left;font-weight:600;">#</th>
+          <th style="padding:10px 12px;text-align:left;font-weight:600;">Iniciativa</th>
+          <th style="padding:10px 12px;text-align:left;font-weight:600;">Área</th>
+          <th style="padding:10px 12px;text-align:center;font-weight:600;">Prioridade</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;">Score Negócio</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;">Score TI</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;">Score Total</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;">Farol</th>
+          <th style="padding:10px 8px;text-align:center;font-weight:600;">Classificação</th>
+          <th style="padding:10px 8px;text-align:left;font-weight:600;">Origem</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbas"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ABA PRIORIZAÇÃO -->
+<div class="sec" id="tab-priorizacao">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+    <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;">
+      Peso Score Negócio:
+      <input type="range" id="wB" min="0" max="100" step="5" value="50" oninput="document.getElementById('wB-val').textContent=this.value+'%';renderPrio();" style="width:120px;accent-color:var(--magenta);">
+      <span id="wB-val" style="font-weight:600;color:var(--magenta);min-width:32px;">50%</span>
+    </label>
+    <span style="font-size:11px;color:var(--text3);">Score TI: <span id="wTI-val">50%</span></span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+    <div>
+      <h3 style="font-size:13px;font-weight:600;color:var(--bordo);margin-bottom:12px;">Matriz de Priorização</h3>
+      <canvas id="scatter" width="400" height="320"></canvas>
+    </div>
+    <div>
+      <h3 style="font-size:13px;font-weight:600;color:var(--bordo);margin-bottom:12px;">Ranking de Iniciativas</h3>
+      <div id="prank"></div>
+    </div>
   </div>
 </div>
 
@@ -572,16 +652,25 @@ function farolPrazo(p){
 function renderSaude(){
   const filtroStatus = document.getElementById('saude-filtro-status')?.value||'';
   const filtroFarol  = document.getElementById('saude-filtro-farol')?.value||'';
+  const filtroArea   = document.getElementById('saude-filtro-area')?.value||'';
+
+  // Populate area filter if empty
+  const areaEl = document.getElementById('saude-filtro-area');
+  if(areaEl && areaEl.options.length<=1){
+    const areas=[...new Set(projects.map(p=>p.area))].sort();
+    areas.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;areaEl.appendChild(o);});
+    if(filtroArea) areaEl.value=filtroArea;
+  }
 
   const rows = projects.filter(p=>{
     if(filtroStatus && p.status!==filtroStatus) return false;
+    if(filtroArea && p.area!==filtroArea) return false;
     if(filtroFarol){
       const f=farolPrazo(p);
       if(f.label!==filtroFarol) return false;
     }
     return true;
   }).sort((a,b)=>{
-    // Sort: Atrasado → Atenção → Em andamento → Não iniciado → Concluído
     const order={'Atrasado':0,'Em risco':1,'No prazo':2,'Sem prazo':3,'Concluído':4};
     return (order[farolPrazo(a).label]||5)-(order[farolPrazo(b).label]||5);
   });
@@ -606,8 +695,8 @@ function renderSaude(){
     return;
   }
 
-  const statusBg = s => s==='Em andamento'?'#E8F0F8':s==='Concluído'?'#E8F5EE':'#F5F5F5';
-  const statusC  = s => s==='Em andamento'?'#1A5C8A':s==='Concluído'?'#1E7A4A':'#666';
+  const statusBg = s => s==='Em andamento'?'#E8F0F8':s==='Concluído'?'#E8F5EE':s==='Stand-by'?'#FEF9E7':s==='Não iniciado'?'#F5F5F5':'#F5F5F5';
+  const statusC  = s => s==='Em andamento'?'#1A5C8A':s==='Concluído'?'#1E7A4A':s==='Stand-by'?'#B8860B':s==='Não iniciado'?'#666':'#666';
 
   tbody.innerHTML = rows.map((p,i)=>{
     const f = farolPrazo(p);
@@ -840,6 +929,8 @@ function clearKFilters(){
 function clearVFilters(){
   vSets.q.clear();areaSets.v.clear();
   document.querySelectorAll('[data-vq]').forEach(b=>b.classList.remove('sel'));
+  const vs=document.getElementById('v-filtro-status');if(vs)vs.value='';
+  const vo=document.getElementById('v-filtro-origem');if(vo)vo.value='';
   updMDDBtn('v');rebuildMDD('v');
   renderCarga();
 }
@@ -1088,11 +1179,14 @@ function initTouch(){
 
 // ── CARGA ─────────────────────────────────────────────────
 function renderCarga(){
+  const filtroStatus=(document.getElementById('v-filtro-status')?.value||'');
+  const filtroOrigem=(document.getElementById('v-filtro-origem')?.value||'');
   const allData=[
     ...projects.map(p=>({...p})),
-    ...basicItems.map(b=>({id:b.id,nome:b.nome,tipo:'Melhoria contínua',area:b.area,q:b._q||'TBD',origem:'basic'}))
+    ...basicItems.map(b=>({id:b.id,nome:b.nome,tipo:b.tipo||'Melhoria contínua',area:b.area,q:b._q||b.q||'TBD',status:b.status||'Não iniciado',origem:'basic'}))
   ].filter(p=>{
-    if(fSets.o.size&&!fSets.o.has(p.origem))return false;
+    if(filtroStatus&&p.status!==filtroStatus)return false;
+    if(filtroOrigem&&p.origem!==filtroOrigem)return false;
     if(vSets.q.size&&!vSets.q.has(p.q))return false;
     if(areaSets.v.size&&!areaSets.v.has(p.area))return false;
     return true;
@@ -1132,37 +1226,55 @@ function renderCarga(){
 // ── BASIC TABLE ───────────────────────────────────────────
 function renderBasic(){
   const s=(document.getElementById('sb')?.value||'').toLowerCase();
+  const filtroArea=(document.getElementById('b-filtro-area')?.value||'');
+  const filtroPrio=(document.getElementById('b-filtro-prio')?.value||'');
+  // Populate area filter dynamically
+  const areaEl=document.getElementById('b-filtro-area');
+  if(areaEl&&areaEl.options.length<=1){
+    const areas=[...new Set(basicItems.map(b=>b.area))].sort();
+    const cur=filtroArea;
+    areas.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;areaEl.appendChild(o);});
+    if(cur) areaEl.value=cur;
+  }
   const rows=basicItems.filter(b=>{
-    try{if(areaSets&&areaSets.b&&areaSets.b.size&&!areaSets.b.has(b.area))return false;}catch(e){}
     if(s&&!b.nome.toLowerCase().includes(s))return false;
+    if(filtroArea&&b.area!==filtroArea)return false;
+    if(filtroPrio&&b.prio!==filtroPrio)return false;
     return true;
   });
   const wB=+(document.getElementById('wB')?.value||50);
   const sortedRows=applySortB(rows);
-  console.log('renderBasic: basicItems=',basicItems.length,'rows=',rows.length,'sorted=',sortedRows.length);
-  const tbody=document.getElementById('tbb');
-  if(!sortedRows.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><strong>Nenhum resultado</strong></div></td></tr>`;return;}
-  tbody.innerHTML=sortedRows.map(b=>{
+  const tbody=document.getElementById('tbas');
+  if(!tbody) return;
+  if(!sortedRows.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><strong>Nenhum resultado</strong></div></td></tr>`;return;}
+  tbody.innerHTML=sortedRows.map((b,idx)=>{
     const biz=calcBizScore(b.bizScores);
     const ti=calcTIScore(b.tiScores);
     const tot=calcTotal(biz,ti,wB);
     const cls=classifyI_II_III([{biz,ti}])[0];
     const pc=b.prio==='Alta'?'color:var(--magenta);font-weight:500':b.prio==='Média'?'color:var(--bordo)':'color:var(--text3)';
+    const frl=farolPrazo(b);
+    const farolHtml=b.end&&b.end!=='TBD'
+      ?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${frl.cor};background:${frl.cor}1A;padding:2px 7px;border-radius:10px;">● ${frl.label}</span>`
+      :'<span style="font-size:10px;color:var(--text3)">—</span>';
     return `<tr>
+      <td style="color:var(--text3);font-size:11px">${idx+1}</td>
       <td style="font-weight:500;max-width:230px">${b.nome}</td>
       <td style="color:var(--text2);font-size:11px">${b.area}</td>
       <td style="font-size:11px;${pc}">${b.prio||'—'}</td>
-      <td><span class="sp-biz">${biz}</span></td>
-      <td>${ti!=null?`<span class="sp-ti">${ti}</span>`:'<span style="font-size:10px;color:var(--text3)">Aguarda TI</span>'}</td>
-      <td>${tot!=null?`<span class="sp-tot">${tot}</span>`:'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
-      <td><span class="qb ${cls.cls.toLowerCase()}">${cls.clsLabel}</span></td>
-      <td><div class="ract"><button class="ibtn" onmouseenter="showPreview(${b.id},true,event)" onmouseleave="hidePreview()" onclick="showPreview(${b.id},true,event)" title="Visualizar">👁</button>
+      <td style="text-align:center"><span class="sp-biz">${biz}</span></td>
+      <td style="text-align:center">${ti!=null?`<span class="sp-ti">${ti}</span>`:'<span style="font-size:10px;color:var(--text3)">Aguarda TI</span>'}</td>
+      <td style="text-align:center">${tot!=null?`<span class="sp-tot">${tot}</span>`:'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
+      <td>${farolHtml}</td>
+      <td style="text-align:center"><span class="qb ${cls.cls.toLowerCase()}">${cls.clsLabel}</span></td>
+      <td style="font-size:11px;color:var(--text3)">BASIC</td>
+      <td><div class="ract">
+        <button class="ibtn" onmouseenter="showPreview(${b.id},true,event)" onmouseleave="hidePreview()" onclick="showPreview(${b.id},true,event)" title="Visualizar">👁</button>
         <button class="ibtn" onclick="openModalBasic(basicItems.find(x=>x.id===${b.id}))" title="Editar">✎</button>
         <button class="ibtn d" onclick="confirmDel(${b.id},'basic')" title="Excluir">✕</button>
       </div></td>
     </tr>`;
   }).join('');
-  
 }
 
 // ── PRIORIZAÇÃO ───────────────────────────────────────────
