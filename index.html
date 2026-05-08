@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · Soluções & Inovação · 2026 · v23.9</title>
+<title>Portfólio RH · Soluções & Inovação · 2026 · v23.8</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -268,7 +268,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.9</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.8</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -1310,16 +1310,14 @@ function renderPrio(){
     .sort((a,b)=> ({'I':0,'II':1,'III':2}[a.cls] - {'I':0,'II':1,'III':2}[b.cls]) || (b.score-a.score));
 
   renderPrioMatrix(items);
-  document.getElementById('prank').innerHTML = items.map((b,i)=>{
-    const clsTitle = {'I':'Alto valor + TI viável','II':'Alto valor, TI complexa','III':'Valor moderado, TI viável','IV':'Baixo valor + TI complexa'};
+  const clsTitle = {'I':'Alto valor + TI viável','II':'Alto valor, TI complexa','III':'Valor moderado, TI viável','IV':'Baixo valor + TI complexa'};
   document.getElementById('prank').innerHTML =
     `<div style="display:grid;grid-template-columns:18px 1fr 36px 36px auto;gap:0;font-size:11px;border:1px solid #eee;border-radius:8px;overflow:hidden;">
       <div style="background:var(--bordo);color:#fff;padding:5px 6px;font-size:10px;font-weight:600;text-align:center;">#</div>
       <div style="background:var(--bordo);color:#fff;padding:5px 8px;font-size:10px;font-weight:600;">Iniciativa</div>
       <div style="background:var(--bordo);color:#fff;padding:5px 4px;font-size:10px;font-weight:600;text-align:center;" title="Score Negócio">Neg.</div>
       <div style="background:var(--bordo);color:#fff;padding:5px 4px;font-size:10px;font-weight:600;text-align:center;" title="Score TI">TI</div>
-      <div style="background:var(--bordo);color:#fff;padding:5px 8px;font-size:10px;font-weight:600;">Classe</div>
-    ` +
+      <div style="background:var(--bordo);color:#fff;padding:5px 8px;font-size:10px;font-weight:600;">Classe</div>` +
     items.map((b,i)=>{
       const bg = i%2===0?'#fff':'#fafafa';
       const title = clsTitle[b.cls]||'';
@@ -1329,7 +1327,6 @@ function renderPrio(){
         <div style="background:${bg};padding:5px 4px;text-align:center;color:var(--text2);border-top:1px solid #f0f0f0;">${b.ti!=null?b.ti:'—'}</div>
         <div style="background:${bg};padding:5px 8px;border-top:1px solid #f0f0f0;" title="${title}"><span class="qb ${b.cls.toLowerCase()}">${b.clsLabel}</span></div>`;
     }).join('') + '</div>';
-  }).join('');
 }
 
 
