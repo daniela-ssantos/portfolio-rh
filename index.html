@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · Soluções & Inovação · 2026 · v23.8</title>
+<title>Portfólio RH · Soluções & Inovação · 2026 · v23.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -268,7 +268,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.8</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.9</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -533,13 +533,19 @@ tr:hover td{background:#fdf5f8;}
 
 <!-- ABA PRIORIZAÇÃO -->
 <div class="sec" id="tab-priorizacao">
-  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
-    <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;">
-      Peso Score Negócio:
-      <input type="range" id="wB" min="0" max="100" step="5" value="50" oninput="const v=+this.value;document.getElementById('wB-val').textContent=v+'%';document.getElementById('wTI-val').textContent=(100-v)+'%';renderPrio();" style="width:120px;accent-color:var(--magenta);">
-      <span id="wB-val" style="font-weight:600;color:var(--magenta);min-width:32px;">50%</span>
-    </label>
-    <span style="font-size:11px;color:var(--text3);">Peso Score TI: <span id="wTI-val" style="font-weight:600;color:var(--bordo)">50%</span></span>
+  <div style="background:#faf8fb;border:1px solid rgba(46,16,30,0.12);border-left:3px solid var(--bordo);border-radius:8px;padding:12px 16px;margin-bottom:18px;">
+    <div style="font-size:11px;font-weight:600;color:var(--bordo);margin-bottom:6px;">📊 Como a classificação é calculada</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.6;">
+      Cada iniciativa recebe dois scores de <strong>0 a 50</strong>: <strong>Negócio</strong> (critérios de valor para o RH) e <strong>TI</strong> (viabilidade de execução — quanto maior, mais fácil para TI).<br>
+      A classificação usa a <strong>mediana do grupo</strong> como referência dinâmica:
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;"><span class="qb i" style="white-space:nowrap;">I – Crítico</span> Negócio <strong>acima</strong> da mediana + TI <strong>viável</strong> → fazer agora</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;"><span class="qb ii" style="white-space:nowrap;">II – Importante</span> Negócio alto, mas TI <strong>complexo</strong> → planejar com TI</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;"><span class="qb iii" style="white-space:nowrap;">III – Postergável</span> Negócio abaixo da mediana, TI viável → aguardar prioridade</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;"><span class="qb iv" style="white-space:nowrap;">IV – Diferir</span> Negócio baixo <strong>e</strong> TI complexo → não priorizar agora</div>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;">Os limiares são recalculados automaticamente conforme novas iniciativas entram no pipeline.</div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
     <div>
@@ -791,27 +797,39 @@ function calcTIScore(s){
 }
 
 // ── CLASSIFICATION (I / II / III / IV) ───────────────────
-// Both scores normalized 0–50. Fixed midpoint thresholds (stable, explainable).
-// Biz ≥ 25 = high value; TI ≥ 25 = viable (higher TI score = easier for TI)
-const BIZ_THRESHOLD = 25;
-const TI_THRESHOLD  = 25;
+// Regra: mediana do Score Negócio e P40 do Score TI como limiares
+// - I–Crítico:      Negócio acima da mediana E TI acima do P40 (viável)
+// - II–Importante:  Negócio acima da mediana MAS TI abaixo do P40 (complexo)
+// - III–Postergável:Negócio abaixo da mediana, TI viável — planejar para mais tarde
+// - IV–Diferir:     Negócio baixo E TI complexo — não priorizar agora
+// Escala: ambos os scores vão de 0 a 50.
 
-function percentile(values, p){
-  const v=[...values].sort((a,b)=>a-b);
-  if(!v.length) return null;
-  const idx = Math.ceil(p/100 * v.length) - 1;
-  return v[Math.max(0, Math.min(idx, v.length-1))];
+function percentile(arr, p){
+  const v=[...arr].sort((a,b)=>a-b);
+  if(!v.length) return 25;
+  return v[Math.floor(p/100*(v.length-1))];
+}
+
+function getThresholds(items){
+  const withTI=items.filter(i=>i.ti!=null);
+  const bizVals=withTI.map(i=>i.biz);
+  const tiVals=withTI.map(i=>i.ti);
+  return {
+    bizT: withTI.length>=3 ? percentile(bizVals,50) : 25, // mediana
+    tiT:  withTI.length>=3 ? percentile(tiVals, 40) : 30  // P40 — menos sensível à concentração no máximo
+  };
 }
 
 function classifyI_II_III(items){
+  const {bizT, tiT} = getThresholds(items);
   return items.map(i=>{
-    if(i.ti==null) return {...i, cls:'IV', clsLabel:'Aguarda TI'};
-    const bizHigh = i.biz >= BIZ_THRESHOLD;
-    const tiEasy  = i.ti  >= TI_THRESHOLD;
-    if( bizHigh &&  tiEasy) return {...i, cls:'I',   clsLabel:'I – Crítico'};
-    if( bizHigh && !tiEasy) return {...i, cls:'II',  clsLabel:'II – Importante'};
-    if(!bizHigh &&  tiEasy) return {...i, cls:'III', clsLabel:'III – Postergável'};
-    return                         {...i, cls:'IV',  clsLabel:'IV – Diferir'};
+    if(i.ti==null) return {...i, cls:'IV', clsLabel:'Aguarda TI', bizT, tiT};
+    const bizHigh = i.biz >= bizT;
+    const tiEasy  = i.ti  >= tiT;
+    if( bizHigh &&  tiEasy) return {...i, cls:'I',   clsLabel:'I – Crítico',       bizT, tiT};
+    if( bizHigh && !tiEasy) return {...i, cls:'II',  clsLabel:'II – Importante',   bizT, tiT};
+    if(!bizHigh &&  tiEasy) return {...i, cls:'III', clsLabel:'III – Postergável',  bizT, tiT};
+    return                         {...i, cls:'IV',  clsLabel:'IV – Diferir',       bizT, tiT};
   });
 }
 function calcTotal(biz,ti,wB){return ti!=null?Math.round(biz*(wB/100)+ti*((100-wB)/100)):null;}
@@ -1339,22 +1357,22 @@ function renderPrioMatrix(items){
   const bizVals=withTI.map(i=>i.biz), tiVals=withTI.map(i=>i.ti);
   const bizHigh=withTI.length>=3?percentile(bizVals,70):25;
   const tiEasy=withTI.length>=3?percentile(tiVals,50):25;
+  const {bizT, tiT} = getThresholds(items);
   const CLS_COLOR={'I':'rgba(45,16,30,0.85)','II':'rgba(102,31,70,0.75)','III':'rgba(190,19,73,0.55)','IV':'rgba(150,150,150,0.6)'};
-  // Fixed thresholds matching classification — lines at 25/25 on 0-50 scale
   const quadrantPlugin={id:'quadrants',beforeDraw(chart){
     const {ctx:c2,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;
-    const xLine=x.getPixelForValue(TI_THRESHOLD);
-    const yLine=y.getPixelForValue(BIZ_THRESHOLD);
+    const xLine=x.getPixelForValue(tiT);
+    const yLine=y.getPixelForValue(bizT);
     c2.save();
     c2.strokeStyle='rgba(45,16,30,0.5)';c2.lineWidth=2.5;c2.setLineDash([7,4]);
     c2.beginPath();c2.moveTo(xLine,top);c2.lineTo(xLine,bottom);c2.stroke();
     c2.beginPath();c2.moveTo(left,yLine);c2.lineTo(right,yLine);c2.stroke();
     c2.setLineDash([]);
     c2.font='bold 10px sans-serif';c2.fillStyle='rgba(45,16,30,0.45)';c2.textAlign='center';
-    c2.fillText('II – Importante',left+(xLine-left)/2,top+14);
-    c2.fillText('I – Crítico',    xLine+(right-xLine)/2,top+14);
-    c2.fillText('IV – Diferir',   left+(xLine-left)/2,bottom-6);
-    c2.fillText('III – Postergável',xLine+(right-xLine)/2,bottom-6);
+    c2.fillText('II – Importante',  left+(xLine-left)/2,    top+14);
+    c2.fillText('I – Crítico',      xLine+(right-xLine)/2,  top+14);
+    c2.fillText('IV – Diferir',     left+(xLine-left)/2,    bottom-6);
+    c2.fillText('III – Postergável',xLine+(right-xLine)/2,  bottom-6);
     c2.restore();
   }};
   scatterChart=new Chart(ctx,{
