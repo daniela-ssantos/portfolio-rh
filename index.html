@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · Soluções & Inovação · 2026 · v23.6</title>
+<title>Portfólio RH · Soluções & Inovação · 2026 · v23.3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -260,6 +260,7 @@ tr:hover td{background:#fdf5f8;}
 .qb.i{background:rgba(45,16,30,0.12);color:#2D101E;border:1px solid rgba(45,16,30,0.25);}
 .qb.ii{background:rgba(102,31,70,0.10);color:#661F46;border:1px solid rgba(102,31,70,0.22);}
 .qb.iii{background:rgba(190,19,73,0.08);color:#BE1349;border:1px solid rgba(190,19,73,0.20);}
+.qb.iv{background:rgba(100,100,100,0.08);color:#666;border:1px solid rgba(100,100,100,0.20);}
 
 </style>
   </head>
@@ -267,7 +268,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.6</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.3</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -798,16 +799,40 @@ function percentile(values, p){
 }
 
 function classifyI_II_III(items){
-  const bizVals = items.map(i=>i.biz).filter(v=>v!=null);
-  const tiVals  = items.map(i=>i.ti ).filter(v=>v!=null);
-  const bizHigh = percentile(bizVals, 70); // top 30%
-  const tiEasy  = percentile(tiVals, 50); // median as 'easy'
+  // Use ALL items with TI score for percentile calculation (population context)
+  const withTI = items.filter(i=>i.ti!=null);
+  const bizVals = withTI.map(i=>i.biz);
+  const tiVals  = withTI.map(i=>i.ti);
+
+  // Thresholds — minimum 3 items needed for percentile to be meaningful
+  const bizHigh = withTI.length >= 3 ? percentile(bizVals, 70) : 25; // P70 or midpoint
+  const bizMed  = withTI.length >= 3 ? percentile(bizVals, 40) : 18;
+  const tiEasy  = withTI.length >= 3 ? percentile(tiVals,  50) : 25; // median
+  const tiHard  = withTI.length >= 3 ? percentile(tiVals,  30) : 15; // bottom 30%
 
   return items.map(i=>{
-    let cls='III', label='III – Postergável';
-    if(i.biz>=bizHigh && i.ti>=tiEasy){ cls='I'; label='I – Crítico'; }
-    else if(i.biz>=bizHigh || (i.biz<bizHigh && i.ti>=tiEasy)){ cls='II'; label='II – Importante'; }
-    return {...i, cls, clsLabel:label};
+    // Aguarda TI — no TI score yet
+    if(i.ti==null) return {...i, cls:'IV', clsLabel:'Aguarda TI'};
+
+    const bizIsHigh = i.biz >= bizHigh;
+    const bizIsMed  = i.biz >= bizMed && i.biz < bizHigh;
+    const tiIsEasy  = i.ti >= tiEasy;
+    const tiIsHard  = i.ti <= tiHard;
+
+    // I – Crítico: high value + viable TI
+    if(bizIsHigh && tiIsEasy)
+      return {...i, cls:'I', clsLabel:'I – Crítico'};
+
+    // IV – Diferir: low value + high complexity
+    if(!bizIsHigh && !bizIsMed && tiIsHard)
+      return {...i, cls:'IV', clsLabel:'IV – Diferir'};
+
+    // II – Importante: high value but complex TI, OR medium value with viable TI
+    if(bizIsHigh || (bizIsMed && tiIsEasy))
+      return {...i, cls:'II', clsLabel:'II – Importante'};
+
+    // III – Postergável: everything else
+    return {...i, cls:'III', clsLabel:'III – Postergável'};
   });
 }
 function calcTotal(biz,ti,wB){return ti!=null?Math.round(biz*(wB/100)+ti*((100-wB)/100)):null;}
@@ -1250,11 +1275,15 @@ function renderBasic(){
   const tbody=document.getElementById('tbas');
   if(!tbody) return;
   if(!sortedRows.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><strong>Nenhum resultado</strong></div></td></tr>`;return;}
+  // Classify ALL basicItems together so percentiles are correct
+  const allWithScores = basicItems.map(b=>({...b, biz:calcBizScore(b.bizScores), ti:calcTIScore(b.tiScores)}));
+  const classifiedAll = classifyI_II_III(allWithScores);
+  const clsMap = Object.fromEntries(classifiedAll.map(b=>[b.id,{cls:b.cls,clsLabel:b.clsLabel}]));
   tbody.innerHTML=sortedRows.map((b,idx)=>{
     const biz=calcBizScore(b.bizScores);
     const ti=calcTIScore(b.tiScores);
     const tot=calcTotal(biz,ti,wB);
-    const cls=classifyI_II_III([{biz,ti}])[0];
+    const c=clsMap[b.id]||{cls:'iii',clsLabel:'III – Postergável'};
     const pc=b.prio==='Alta'?'color:var(--magenta);font-weight:500':b.prio==='Média'?'color:var(--bordo)':'color:var(--text3)';
     const frl=farolPrazo(b);
     const farolHtml=b.end&&b.end!=='TBD'
@@ -1269,7 +1298,7 @@ function renderBasic(){
       <td style="text-align:center">${ti!=null?`<span class="sp-ti">${ti}</span>`:'<span style="font-size:10px;color:var(--text3)">Aguarda TI</span>'}</td>
       <td style="text-align:center">${tot!=null?`<span class="sp-tot">${tot}</span>`:'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
       <td>${farolHtml}</td>
-      <td style="text-align:center"><span class="qb ${cls.cls.toLowerCase()}">${cls.clsLabel}</span></td>
+      <td style="text-align:center"><span class="qb ${c.cls.toLowerCase()}">${c.clsLabel}</span></td>
       <td style="font-size:11px;color:var(--text3)">BASIC</td>
       <td><div class="ract">
         <button class="ibtn" onmouseenter="showPreview(${b.id},true,event)" onmouseleave="hidePreview()" onclick="showPreview(${b.id},true,event)" title="Visualizar">👁</button>
@@ -1316,42 +1345,45 @@ function renderPrioMatrix(items){
   const c=document.getElementById('scatter'); if(!c) return;
   const ctx=c.getContext('2d');
   if(scatterChart) scatterChart.destroy();
-  // Calculate midpoints for quadrant lines
-  const allBiz=items.map(i=>i.biz); const allTi=items.map(i=>i.ti);
-  const bizMid=items.length?(Math.max(...allBiz)+Math.min(...allBiz))/2:25;
-  const tiMid=items.length?(Math.max(...allTi)+Math.min(...allTi))/2:25;
-  // Quadrant divider plugin
+  // Use same thresholds as classification
+  const withTI=items.filter(i=>i.ti!=null);
+  const bizVals=withTI.map(i=>i.biz), tiVals=withTI.map(i=>i.ti);
+  const bizHigh=withTI.length>=3?percentile(bizVals,70):25;
+  const tiEasy=withTI.length>=3?percentile(tiVals,50):25;
+  const CLS_COLOR={'I':'rgba(45,16,30,0.85)','II':'rgba(102,31,70,0.75)','III':'rgba(190,19,73,0.55)','IV':'rgba(150,150,150,0.6)'};
+  // Quadrant divider plugin using actual classification thresholds
   const quadrantPlugin={id:'quadrants',beforeDraw(chart){
     const {ctx:c2,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;
-    const xMid=x.getPixelForValue(tiMid), yMid=y.getPixelForValue(bizMid);
+    const xLine=x.getPixelForValue(tiEasy);
+    const yLine=y.getPixelForValue(bizHigh);
     c2.save();
-    c2.strokeStyle='rgba(45,16,30,0.35)';c2.lineWidth=2;c2.setLineDash([6,3]);
-    c2.beginPath();c2.moveTo(xMid,top);c2.lineTo(xMid,bottom);c2.stroke();
-    c2.beginPath();c2.moveTo(left,yMid);c2.lineTo(right,yMid);c2.stroke();
+    c2.strokeStyle='rgba(45,16,30,0.4)';c2.lineWidth=2;c2.setLineDash([6,3]);
+    c2.beginPath();c2.moveTo(xLine,top);c2.lineTo(xLine,bottom);c2.stroke();
+    c2.beginPath();c2.moveTo(left,yLine);c2.lineTo(right,yLine);c2.stroke();
     c2.setLineDash([]);
-    // Quadrant labels
-    c2.font='10px sans-serif';c2.fillStyle='rgba(45,16,30,0.35)';c2.textAlign='center';
-    c2.fillText('Priorizar',left+(xMid-left)/2,top+14);
-    c2.fillText('Planejar',xMid+(right-xMid)/2,top+14);
-    c2.fillText('Avaliar',left+(xMid-left)/2,bottom-6);
-    c2.fillText('Diferir',xMid+(right-xMid)/2,bottom-6);
+    c2.font='bold 10px sans-serif';c2.fillStyle='rgba(45,16,30,0.4)';
+    c2.textAlign='center';
+    c2.fillText('I – Crítico',left+(xLine-left)/2,top+14);
+    c2.fillText('II – Planejar',xLine+(right-xLine)/2,top+14);
+    c2.fillText('III – Postergável',left+(xLine-left)/2,bottom-6);
+    c2.fillText('IV – Diferir',xLine+(right-xLine)/2,bottom-6);
     c2.restore();
   }};
   scatterChart=new Chart(ctx,{
     type:'scatter',
-    data:{datasets:['I','II','III'].map(cls=>({
+    data:{datasets:['I','II','III','IV'].map(cls=>({
       label:cls,
-      data:items.filter(i=>i.cls===cls).map(i=>({x:i.ti,y:i.biz,label:i.nome,score:i.score})),
-      backgroundColor:cls==='I'?'rgba(45,16,30,0.8)':cls==='II'?'rgba(102,31,70,0.7)':'rgba(190,19,73,0.55)',
-      pointRadius:6,pointHoverRadius:8}))},
+      data:items.filter(i=>i.cls===cls&&i.ti!=null).map(i=>({x:i.ti,y:i.biz,label:i.nome,score:i.score})),
+      backgroundColor:CLS_COLOR[cls],
+      pointRadius:7,pointHoverRadius:9}))},
     options:{
       plugins:{
         legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>{const d=ctx.raw;return `${d.label} — Score ${d.score}`;}}}
+        tooltip:{callbacks:{label:ctx=>{const d=ctx.raw;return `${d.label} — Score ${d.score??'—'}`;}}}
       },
       scales:{
-        x:{title:{display:true,text:'Complexidade TI'},grid:{color:'rgba(0,0,0,0.06)',lineWidth:1}},
-        y:{title:{display:true,text:'Valor de Negócio'},grid:{color:'rgba(0,0,0,0.06)',lineWidth:1}}
+        x:{min:0,max:50,title:{display:true,text:'Complexidade TI (viabilidade)'},grid:{color:'rgba(0,0,0,0.05)',lineWidth:1}},
+        y:{min:0,max:50,title:{display:true,text:'Valor de Negócio'},grid:{color:'rgba(0,0,0,0.05)',lineWidth:1}}
       }
     },
     plugins:[quadrantPlugin]
