@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Portfólio RH · Soluções & Inovação · 2026 · v23.8</title>
+<title>Portfólio RH · Soluções & Inovação · 2026 · v23.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -268,7 +268,7 @@ tr:hover td{background:#fdf5f8;}
 <header>
   <div class="logo">
     <div class="logo-mark">RH</div>
-    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.8</span></span>
+    <span class="logo-text">Portfólio RH <span class="logo-sub">· Soluções & Inovação · 2026 · v23.9</span></span>
   </div>
   <span class="hright" id="last-update"></span>
 </header>
@@ -790,7 +790,12 @@ function calcTIScore(s){
   return max>0?Math.round((got/max)*50):0;
 }
 
-// ── PERCENTIL-BASED CLASSIFICATION (I / II / III) ───────────────
+// ── CLASSIFICATION (I / II / III / IV) ───────────────────
+// Both scores normalized 0–50. Fixed midpoint thresholds (stable, explainable).
+// Biz ≥ 25 = high value; TI ≥ 25 = viable (higher TI score = easier for TI)
+const BIZ_THRESHOLD = 25;
+const TI_THRESHOLD  = 25;
+
 function percentile(values, p){
   const v=[...values].sort((a,b)=>a-b);
   if(!v.length) return null;
@@ -799,40 +804,14 @@ function percentile(values, p){
 }
 
 function classifyI_II_III(items){
-  // Use ALL items with TI score for percentile calculation (population context)
-  const withTI = items.filter(i=>i.ti!=null);
-  const bizVals = withTI.map(i=>i.biz);
-  const tiVals  = withTI.map(i=>i.ti);
-
-  // Thresholds — minimum 3 items needed for percentile to be meaningful
-  const bizHigh = withTI.length >= 3 ? percentile(bizVals, 70) : 25; // P70 or midpoint
-  const bizMed  = withTI.length >= 3 ? percentile(bizVals, 40) : 18;
-  const tiEasy  = withTI.length >= 3 ? percentile(tiVals,  50) : 25; // median
-  const tiHard  = withTI.length >= 3 ? percentile(tiVals,  30) : 15; // bottom 30%
-
   return items.map(i=>{
-    // Aguarda TI — no TI score yet
     if(i.ti==null) return {...i, cls:'IV', clsLabel:'Aguarda TI'};
-
-    const bizIsHigh = i.biz >= bizHigh;
-    const bizIsMed  = i.biz >= bizMed && i.biz < bizHigh;
-    const tiIsEasy  = i.ti >= tiEasy;
-    const tiIsHard  = i.ti <= tiHard;
-
-    // I – Crítico: high value + viable TI
-    if(bizIsHigh && tiIsEasy)
-      return {...i, cls:'I', clsLabel:'I – Crítico'};
-
-    // IV – Diferir: low value + high complexity
-    if(!bizIsHigh && !bizIsMed && tiIsHard)
-      return {...i, cls:'IV', clsLabel:'IV – Diferir'};
-
-    // II – Importante: high value but complex TI, OR medium value with viable TI
-    if(bizIsHigh || (bizIsMed && tiIsEasy))
-      return {...i, cls:'II', clsLabel:'II – Importante'};
-
-    // III – Postergável: everything else
-    return {...i, cls:'III', clsLabel:'III – Postergável'};
+    const bizHigh = i.biz >= BIZ_THRESHOLD;
+    const tiEasy  = i.ti  >= TI_THRESHOLD;
+    if( bizHigh &&  tiEasy) return {...i, cls:'I',   clsLabel:'I – Crítico'};
+    if( bizHigh && !tiEasy) return {...i, cls:'II',  clsLabel:'II – Importante'};
+    if(!bizHigh &&  tiEasy) return {...i, cls:'III', clsLabel:'III – Postergável'};
+    return                         {...i, cls:'IV',  clsLabel:'IV – Diferir'};
   });
 }
 function calcTotal(biz,ti,wB){return ti!=null?Math.round(biz*(wB/100)+ti*((100-wB)/100)):null;}
@@ -1332,20 +1311,24 @@ function renderPrio(){
 
   renderPrioMatrix(items);
   document.getElementById('prank').innerHTML = items.map((b,i)=>{
-    const clsTitle = b.cls==='I'?'Alto valor de negócio + TI viável':
-                     b.cls==='II'?'Alto valor de negócio ou TI viável (não ambos)':
-                     b.cls==='III'?'Valor médio/baixo e TI não prioritária':
-                     b.cls==='IV'?'Baixo valor + TI complexa':
-                     'Aguardando avaliação de TI';
-    return `<div class="rr" title="${clsTitle}">
-      <span class="rn">${i+1}</span>
-      <span class="rname">${b.nome}</span>
-      <span style="display:inline-flex;gap:4px;align-items:center;margin-right:4px;">
-        <span title="Score Negócio" style="font-size:10px;background:rgba(45,16,30,0.08);color:#2D101E;padding:1px 6px;border-radius:6px;">N:${b.biz??'—'}</span>
-        <span title="Score TI" style="font-size:10px;background:rgba(102,31,70,0.08);color:#661F46;padding:1px 6px;border-radius:6px;">${b.ti!=null?'TI:'+b.ti:'Aguarda TI'}</span>
-      </span>
-      <span class="qb ${b.cls.toLowerCase()}" style="margin-right:4px;">${b.clsLabel}</span>
-    </div>`;
+    const clsTitle = {'I':'Alto valor + TI viável','II':'Alto valor, TI complexa','III':'Valor moderado, TI viável','IV':'Baixo valor + TI complexa'};
+  document.getElementById('prank').innerHTML =
+    `<div style="display:grid;grid-template-columns:18px 1fr 36px 36px auto;gap:0;font-size:11px;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+      <div style="background:var(--bordo);color:#fff;padding:5px 6px;font-size:10px;font-weight:600;text-align:center;">#</div>
+      <div style="background:var(--bordo);color:#fff;padding:5px 8px;font-size:10px;font-weight:600;">Iniciativa</div>
+      <div style="background:var(--bordo);color:#fff;padding:5px 4px;font-size:10px;font-weight:600;text-align:center;" title="Score Negócio">Neg.</div>
+      <div style="background:var(--bordo);color:#fff;padding:5px 4px;font-size:10px;font-weight:600;text-align:center;" title="Score TI">TI</div>
+      <div style="background:var(--bordo);color:#fff;padding:5px 8px;font-size:10px;font-weight:600;">Classe</div>
+    ` +
+    items.map((b,i)=>{
+      const bg = i%2===0?'#fff':'#fafafa';
+      const title = clsTitle[b.cls]||'';
+      return `<div style="background:${bg};padding:5px 6px;font-size:10px;color:var(--text3);text-align:center;border-top:1px solid #f0f0f0;">${i+1}</div>
+        <div style="background:${bg};padding:5px 8px;line-height:1.3;border-top:1px solid #f0f0f0;">${b.nome}</div>
+        <div style="background:${bg};padding:5px 4px;text-align:center;color:var(--text2);border-top:1px solid #f0f0f0;">${b.biz??'—'}</div>
+        <div style="background:${bg};padding:5px 4px;text-align:center;color:var(--text2);border-top:1px solid #f0f0f0;">${b.ti!=null?b.ti:'—'}</div>
+        <div style="background:${bg};padding:5px 8px;border-top:1px solid #f0f0f0;" title="${title}"><span class="qb ${b.cls.toLowerCase()}">${b.clsLabel}</span></div>`;
+    }).join('') + '</div>';
   }).join('');
 }
 
@@ -1360,33 +1343,20 @@ function renderPrioMatrix(items){
   const bizHigh=withTI.length>=3?percentile(bizVals,70):25;
   const tiEasy=withTI.length>=3?percentile(tiVals,50):25;
   const CLS_COLOR={'I':'rgba(45,16,30,0.85)','II':'rgba(102,31,70,0.75)','III':'rgba(190,19,73,0.55)','IV':'rgba(150,150,150,0.6)'};
-  const dataWithTI=items.filter(i=>i.ti!=null);
-  const bizVals2=dataWithTI.map(i=>i.biz), tiVals2=dataWithTI.map(i=>i.ti);
-  // Use SAME thresholds as classification so points are in correct quadrants
-  const xThresh=dataWithTI.length>=3?percentile(tiVals2,50):25;  // tiEasy = P50
-  const yThresh=dataWithTI.length>=3?percentile(bizVals2,70):25; // bizHigh = P70
-  const allBiz=bizVals2, allTi=tiVals2;
-  const xMin=dataWithTI.length?Math.max(0,Math.min(...allTi)-4):0;
-  const xMax=dataWithTI.length?Math.min(50,Math.max(...allTi)+4):50;
-  const yMin=dataWithTI.length?Math.max(0,Math.min(...allBiz)-4):0;
-  const yMax=dataWithTI.length?Math.min(50,Math.max(...allBiz)+4):50;
+  // Fixed thresholds matching classification — lines at 25/25 on 0-50 scale
   const quadrantPlugin={id:'quadrants',beforeDraw(chart){
     const {ctx:c2,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;
-    const xLine=x.getPixelForValue(xThresh);
-    const yLine=y.getPixelForValue(yThresh);
+    const xLine=x.getPixelForValue(TI_THRESHOLD);
+    const yLine=y.getPixelForValue(BIZ_THRESHOLD);
     c2.save();
-    c2.strokeStyle='rgba(45,16,30,0.45)';c2.lineWidth=2;c2.setLineDash([6,4]);
+    c2.strokeStyle='rgba(45,16,30,0.5)';c2.lineWidth=2.5;c2.setLineDash([7,4]);
     c2.beginPath();c2.moveTo(xLine,top);c2.lineTo(xLine,bottom);c2.stroke();
     c2.beginPath();c2.moveTo(left,yLine);c2.lineTo(right,yLine);c2.stroke();
     c2.setLineDash([]);
-    c2.font='bold 10px sans-serif';c2.fillStyle='rgba(45,16,30,0.4)';c2.textAlign='center';
-    // Top-left: high biz + low TI = II Importante
+    c2.font='bold 10px sans-serif';c2.fillStyle='rgba(45,16,30,0.45)';c2.textAlign='center';
     c2.fillText('II – Importante',left+(xLine-left)/2,top+14);
-    // Top-right: high biz + high TI = I Crítico
-    c2.fillText('I – Crítico',xLine+(right-xLine)/2,top+14);
-    // Bottom-left: low biz + low TI = IV Diferir
-    c2.fillText('IV – Diferir',left+(xLine-left)/2,bottom-6);
-    // Bottom-right: low biz + high TI = III Postergável
+    c2.fillText('I – Crítico',    xLine+(right-xLine)/2,top+14);
+    c2.fillText('IV – Diferir',   left+(xLine-left)/2,bottom-6);
     c2.fillText('III – Postergável',xLine+(right-xLine)/2,bottom-6);
     c2.restore();
   }};
@@ -1400,11 +1370,11 @@ function renderPrioMatrix(items){
     options:{
       plugins:{
         legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>{const d=ctx.raw;return `${d.label} — Score ${d.score??'—'}`;}}}
+        tooltip:{callbacks:{label:c=>{const d=c.raw;return `${d.label} — N:${d.y} TI:${d.x}`;}}}
       },
       scales:{
-        x:{min:xMin,max:xMax,title:{display:true,text:'Complexidade TI (viabilidade → maior = mais fácil)'},grid:{color:'rgba(0,0,0,0.05)'}},
-        y:{min:yMin,max:yMax,title:{display:true,text:'Valor de Negócio'},grid:{color:'rgba(0,0,0,0.05)'}}
+        x:{min:0,max:50,title:{display:true,text:'Score TI (viabilidade — maior = mais fácil)'},grid:{color:'rgba(0,0,0,0.05)'}},
+        y:{min:0,max:50,title:{display:true,text:'Score de Negócio'},grid:{color:'rgba(0,0,0,0.05)'}}
       }
     },
     plugins:[quadrantPlugin]
