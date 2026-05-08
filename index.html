@@ -147,7 +147,7 @@ tr:hover td{background:#fdf5f8;}
 .rn{font-size:11px;font-weight:600;color:var(--text3);width:18px;text-align:right;}
 .rname{font-size:11px;flex:1;line-height:1.3;}
 .rs{font-size:12px;font-weight:500;min-width:26px;text-align:right;color:var(--bordo);}
-.qb{display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:500;white-space:nowrap;}
+.qb{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;white-space:nowrap;}
 .qq{background:#e8f4f0;color:#0f5c3a;}
 .qp{background:#f0e8f4;color:var(--bordo);}
 .qa{background:#fff3e0;color:#7a4e00;}
@@ -257,9 +257,9 @@ tr:hover td{background:#fdf5f8;}
 #tbs tr:hover { background:#f5f0f8 !important; }
 
 
-.qb.i{background:#2D101E;color:#fff;font-weight:600;}
-.qb.ii{background:#661F46;color:#fff;font-weight:500;}
-.qb.iii{background:#BE1349;color:#fff;opacity:.85;}
+.qb.i{background:rgba(45,16,30,0.12);color:#2D101E;border:1px solid rgba(45,16,30,0.25);}
+.qb.ii{background:rgba(102,31,70,0.10);color:#661F46;border:1px solid rgba(102,31,70,0.22);}
+.qb.iii{background:rgba(190,19,73,0.08);color:#BE1349;border:1px solid rgba(190,19,73,0.20);}
 
 </style>
   </head>
@@ -404,13 +404,12 @@ tr:hover td{background:#fdf5f8;}
     </div>
     <div class="tsep"></div>
     <span class="flbl">Status</span>
-    <select id="v-filtro-status" onchange="renderCarga()" style="padding:5px 10px;font-size:11px;border:1px solid #ddd;border-radius:6px;font-family:inherit;">
-      <option value="">Todos</option>
-      <option value="Em andamento">Em andamento</option>
-      <option value="Não iniciado">Não iniciado</option>
-      <option value="Stand-by">Stand-by</option>
-      <option value="Concluído">Concluído</option>
-    </select>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button class="fbtn" data-vs="Em andamento" onclick="toggleVStatus('Em andamento',this)">Em andamento</button>
+      <button class="fbtn" data-vs="Não iniciado" onclick="toggleVStatus('Não iniciado',this)">Não iniciado</button>
+      <button class="fbtn" data-vs="Stand-by" onclick="toggleVStatus('Stand-by',this)">Stand-by</button>
+      <button class="fbtn" data-vs="Concluído" onclick="toggleVStatus('Concluído',this)">Concluído</button>
+    </div>
     <div class="tsep"></div>
     <span class="flbl">Origem</span>
     <select id="v-filtro-origem" onchange="renderCarga()" style="padding:5px 10px;font-size:11px;border:1px solid #ddd;border-radius:6px;font-family:inherit;">
@@ -543,12 +542,12 @@ tr:hover td{background:#fdf5f8;}
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
     <div>
-      <h3 style="font-size:13px;font-weight:600;color:var(--bordo);margin-bottom:12px;">Matriz de Priorização</h3>
-      <canvas id="scatter" width="400" height="320"></canvas>
-    </div>
-    <div>
       <h3 style="font-size:13px;font-weight:600;color:var(--bordo);margin-bottom:12px;">Ranking de Iniciativas</h3>
       <div id="prank"></div>
+    </div>
+    <div>
+      <h3 style="font-size:13px;font-weight:600;color:var(--bordo);margin-bottom:12px;">Matriz de Priorização</h3>
+      <canvas id="scatter" width="400" height="320"></canvas>
     </div>
   </div>
 </div>
@@ -883,6 +882,12 @@ const fSets={q:new Set(),t:new Set(),o:new Set()};
 
 const kSets={t:new Set(),o:new Set()};
 const vSets={q:new Set()};
+const vStatusSet=new Set();
+function toggleVStatus(val,btn){
+  if(vStatusSet.has(val)){vStatusSet.delete(val);btn.classList.remove('sel');}
+  else{vStatusSet.add(val);btn.classList.add('sel');}
+  renderCarga();
+}
 let editId=null,editBasicId=null,currentFormType='priorizado';
 let scatterChart=null;
 let confirmCb=null;
@@ -927,9 +932,8 @@ function clearKFilters(){
   renderKanban();
 }
 function clearVFilters(){
-  vSets.q.clear();areaSets.v.clear();
-  document.querySelectorAll('[data-vq]').forEach(b=>b.classList.remove('sel'));
-  const vs=document.getElementById('v-filtro-status');if(vs)vs.value='';
+  vSets.q.clear();areaSets.v.clear();vStatusSet.clear();
+  document.querySelectorAll('[data-vq],[data-vs]').forEach(b=>b.classList.remove('sel'));
   const vo=document.getElementById('v-filtro-origem');if(vo)vo.value='';
   updMDDBtn('v');rebuildMDD('v');
   renderCarga();
@@ -1179,13 +1183,12 @@ function initTouch(){
 
 // ── CARGA ─────────────────────────────────────────────────
 function renderCarga(){
-  const filtroStatus=(document.getElementById('v-filtro-status')?.value||'');
   const filtroOrigem=(document.getElementById('v-filtro-origem')?.value||'');
   const allData=[
     ...projects.map(p=>({...p})),
     ...basicItems.map(b=>({id:b.id,nome:b.nome,tipo:b.tipo||'Melhoria contínua',area:b.area,q:b._q||b.q||'TBD',status:b.status||'Não iniciado',origem:'basic'}))
   ].filter(p=>{
-    if(filtroStatus&&p.status!==filtroStatus)return false;
+    if(vStatusSet.size&&!vStatusSet.has(p.status))return false;
     if(filtroOrigem&&p.origem!==filtroOrigem)return false;
     if(vSets.q.size&&!vSets.q.has(p.q))return false;
     if(areaSets.v.size&&!areaSets.v.has(p.area))return false;
@@ -1303,7 +1306,7 @@ function renderPrio(){
     <div class="rr">
       <span class="rn">${i+1}</span>
       <span class="rname">${b.nome}</span>
-      <span class="qb">${b.clsLabel}</span>
+      <span class="qb ${b.cls.toLowerCase()}" style="margin-right:4px;">${b.clsLabel}</span>
       <span class="rs">${b.score??'—'}</span>
     </div>`).join('');
 }
@@ -1313,13 +1316,45 @@ function renderPrioMatrix(items){
   const c=document.getElementById('scatter'); if(!c) return;
   const ctx=c.getContext('2d');
   if(scatterChart) scatterChart.destroy();
+  // Calculate midpoints for quadrant lines
+  const allBiz=items.map(i=>i.biz); const allTi=items.map(i=>i.ti);
+  const bizMid=items.length?(Math.max(...allBiz)+Math.min(...allBiz))/2:25;
+  const tiMid=items.length?(Math.max(...allTi)+Math.min(...allTi))/2:25;
+  // Quadrant divider plugin
+  const quadrantPlugin={id:'quadrants',beforeDraw(chart){
+    const {ctx:c2,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;
+    const xMid=x.getPixelForValue(tiMid), yMid=y.getPixelForValue(bizMid);
+    c2.save();
+    c2.strokeStyle='rgba(45,16,30,0.35)';c2.lineWidth=2;c2.setLineDash([6,3]);
+    c2.beginPath();c2.moveTo(xMid,top);c2.lineTo(xMid,bottom);c2.stroke();
+    c2.beginPath();c2.moveTo(left,yMid);c2.lineTo(right,yMid);c2.stroke();
+    c2.setLineDash([]);
+    // Quadrant labels
+    c2.font='10px sans-serif';c2.fillStyle='rgba(45,16,30,0.35)';c2.textAlign='center';
+    c2.fillText('Priorizar',left+(xMid-left)/2,top+14);
+    c2.fillText('Planejar',xMid+(right-xMid)/2,top+14);
+    c2.fillText('Avaliar',left+(xMid-left)/2,bottom-6);
+    c2.fillText('Diferir',xMid+(right-xMid)/2,bottom-6);
+    c2.restore();
+  }};
   scatterChart=new Chart(ctx,{
     type:'scatter',
     data:{datasets:['I','II','III'].map(cls=>({
       label:cls,
       data:items.filter(i=>i.cls===cls).map(i=>({x:i.ti,y:i.biz,label:i.nome,score:i.score})),
-      backgroundColor:cls==='I'?'#2D101E':cls==='II'?'#661F46':'#BE1349'}))},
-    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const d=ctx.raw;return `${d.label} — Score ${d.score}`;}}}},scales:{x:{title:{display:true,text:'Complexidade TI'}},y:{title:{display:true,text:'Valor de Negócio'}}}}
+      backgroundColor:cls==='I'?'rgba(45,16,30,0.8)':cls==='II'?'rgba(102,31,70,0.7)':'rgba(190,19,73,0.55)',
+      pointRadius:6,pointHoverRadius:8}))},
+    options:{
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{const d=ctx.raw;return `${d.label} — Score ${d.score}`;}}}
+      },
+      scales:{
+        x:{title:{display:true,text:'Complexidade TI'},grid:{color:'rgba(0,0,0,0.06)',lineWidth:1}},
+        y:{title:{display:true,text:'Valor de Negócio'},grid:{color:'rgba(0,0,0,0.06)',lineWidth:1}}
+      }
+    },
+    plugins:[quadrantPlugin]
   });
 }
 
